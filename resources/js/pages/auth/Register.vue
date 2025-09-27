@@ -1,0 +1,107 @@
+<script lang="ts" setup>
+import RegisteredUserController from '@/actions/App/Http/Controllers/Auth/RegisteredUserController';
+import InputError from '@/components/InputError.vue';
+import TextLink from '@/components/TextLink.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import AuthBase from '@/layouts/AuthLayout.vue';
+import { login } from '@/routes';
+import { Form, Head } from '@inertiajs/vue3';
+import { LoaderCircle } from 'lucide-vue-next';
+</script>
+
+<template>
+    <AuthBase
+        description="Enter your details below to create your account"
+        title="Create an account"
+    >
+        <Head title="Register" />
+
+        <Form
+            v-slot="{ errors, processing }"
+            :reset-on-success="['password', 'password_confirmation']"
+            class="flex flex-col gap-6"
+            v-bind="RegisteredUserController.store.form()"
+        >
+            <div class="grid gap-6">
+                <div class="grid gap-2">
+                    <Label for="name">Name</Label>
+                    <Input
+                        id="name"
+                        :tabindex="1"
+                        autofocus
+                        name="name"
+                        placeholder="Full name"
+                        required
+                        type="text"
+                    />
+                    <InputError :message="errors.name" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="email">Email address</Label>
+                    <Input
+                        id="email"
+                        :tabindex="2"
+                        name="email"
+                        placeholder="email@example.com"
+                        required
+                        type="email"
+                    />
+                    <InputError :message="errors.email" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="password">Password</Label>
+                    <Input
+                        id="password"
+                        :tabindex="3"
+                        name="password"
+                        placeholder="Password"
+                        required
+                        type="password"
+                    />
+                    <InputError :message="errors.password" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="password_confirmation">Confirm password</Label>
+                    <Input
+                        id="password_confirmation"
+                        :tabindex="4"
+                        name="password_confirmation"
+                        placeholder="Confirm password"
+                        required
+                        type="password"
+                    />
+                    <InputError :message="errors.password_confirmation" />
+                </div>
+
+                <Button
+                    :disabled="processing"
+                    class="mt-2 w-full"
+                    data-test="register-user-button"
+                    tabindex="5"
+                    type="submit"
+                >
+                    <LoaderCircle
+                        v-if="processing"
+                        class="h-4 w-4 animate-spin"
+                    />
+                    Create account
+                </Button>
+            </div>
+
+            <div class="text-center text-sm text-muted-foreground">
+                Already have an account?
+                <TextLink
+                    :href="login()"
+                    :tabindex="6"
+                    class="underline underline-offset-4"
+                    >Log in</TextLink
+                >
+            </div>
+        </Form>
+    </AuthBase>
+</template>
