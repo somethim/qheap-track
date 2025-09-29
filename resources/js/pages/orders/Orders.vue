@@ -56,10 +56,15 @@ const columns: ColumnDef<Order>[] = [
             );
         },
         cell: ({ row }) => {
+            const orderNumber = row.original.order_number;
+            const shortNumber = orderNumber.slice(-8);
             return h(
                 'div',
-                { class: 'text-left font-mono' },
-                row.original.order_number,
+                {
+                    class: 'text-left fo' + 'nt-mono',
+                    title: orderNumber,
+                },
+                shortNumber,
             );
         },
     },

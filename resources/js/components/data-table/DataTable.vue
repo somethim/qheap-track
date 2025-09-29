@@ -8,6 +8,7 @@ import {
     useVueTable,
 } from '@tanstack/vue-table';
 
+import TablePagination from '@/components/data-table/TablePagination.vue';
 import { Button } from '@/components/ui/button';
 import { Table } from '@/components/ui/table';
 import { useDateRange } from '@/composables/useDateRange';
@@ -20,7 +21,6 @@ import DatePicker from './DatePicker.vue';
 import DatePresets from './DatePresets.vue';
 import TableBody from './TableBody.vue';
 import TableHeader from './TableHeader.vue';
-import TablePagination from './TablePagination.vue';
 
 const props = defineProps<{
     columns: ColumnDef<TData, TValue>[];
@@ -134,49 +134,56 @@ const table = useVueTable({
 
 <template>
     <div class="space-y-4">
-        <div class="flex flex-col space-y-3">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    <DatePicker
-                        :max-value="startDateMax"
-                        :value="startDate"
-                        label="Start Date"
-                        @update:value="handleStartDateChange"
-                    />
-                    <DatePicker
-                        :min-value="endDateMin"
-                        :value="endDate"
-                        label="End Date"
-                        @update:value="handleEndDateChange"
-                    />
-                    <Button
-                        v-if="hasBothDates"
-                        size="sm"
-                        variant="outline"
-                        @click="clearDates"
-                    >
-                        Clear
-                    </Button>
-                </div>
+        <!-- Top row: Date controls left, Add button right -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <DatePicker
+                    :max-value="startDateMax"
+                    :value="startDate"
+                    label="Start Date"
+                    @update:value="handleStartDateChange"
+                />
+                <DatePicker
+                    :min-value="endDateMin"
+                    :value="endDate"
+                    label="End Date"
+                    @update:value="handleEndDateChange"
+                />
+                <Button
+                    v-if="hasBothDates"
+                    size="sm"
+                    variant="outline"
+                    @click="clearDates"
+                >
+                    Clear
+                </Button>
+            </div>
+            <div>
                 <Button v-if="addItem" size="sm" @click="addItem">
                     <Plus class="mr-2 h-4 w-4" />
                     Add
                 </Button>
             </div>
+        </div>
+
+        <!-- Date presets left, Pagination right -->
+        <div class="flex items-center justify-between">
             <DatePresets
                 :on-last-month="handleLastMonth"
                 :on-last-week="handleLastWeek"
                 :on-last-year="handleLastYear"
                 :on-today="handleToday"
             />
-        </div>
-        <div class="rounded-md border">
             <TablePagination
                 :pagination="props.pagination"
                 :table="table"
                 @page-change="handlePageChange"
                 @page-size-change="handlePageSizeChange"
             />
+        </div>
+
+        <!-- Table -->
+        <div class="rounded-md border">
             <Table>
                 <TableHeader :table="table" />
                 <TableBody
