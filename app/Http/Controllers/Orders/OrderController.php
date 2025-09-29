@@ -84,7 +84,7 @@ class OrderController extends Controller
 
     public function store(OrderRequest $request) {}
 
-    public function show(Request $request, int $id)
+    public function show(Request $request, string $id)
     {
         $query = match ($request->query('type', 'client')) {
             OrderType::CLIENT->value => Order::clientOrders()->with(['client']),

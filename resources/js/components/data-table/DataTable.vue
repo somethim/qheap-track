@@ -170,24 +170,6 @@ const table = useVueTable({
     getPaginationRowModel: getPaginationRowModel(),
     manualPagination: true,
     manualSorting: true,
-    onSortingChange: (updaterOrValue) => {
-        if (typeof updaterOrValue === 'function') {
-            const currentSorting =
-                props.sortBy && props.sortDirection
-                    ? [
-                          {
-                              id: props.sortBy,
-                              desc: props.sortDirection === 'desc',
-                          },
-                      ]
-                    : [];
-            const newSorting = updaterOrValue(currentSorting);
-            if (newSorting.length > 0 && props.onSort) {
-                const sort = newSorting[0];
-                props.onSort(sort.id, sort.desc ? 'desc' : 'asc');
-            }
-        }
-    },
     state: {
         pagination: {
             pageIndex: props.pagination.currentPage - 1,

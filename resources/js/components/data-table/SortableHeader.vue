@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import { Button } from '@/components/ui/button';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
-import { h } from 'vue';
 import type { Column } from '@tanstack/vue-table';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
 
 interface Props {
     column: Column<any>;
@@ -25,7 +24,8 @@ const getSortIcon = () => {
 const handleSort = () => {
     if (props.onSort) {
         const isCurrentlySorted = props.sortBy === props.column.id;
-        const newDirection = isCurrentlySorted && props.sortDirection === 'asc' ? 'desc' : 'asc';
+        const newDirection =
+            isCurrentlySorted && props.sortDirection === 'asc' ? 'desc' : 'asc';
         props.onSort(props.column.id, newDirection);
     } else {
         props.column.toggleSorting(props.sortDirection === 'asc');
@@ -34,10 +34,7 @@ const handleSort = () => {
 </script>
 
 <template>
-    <Button
-        variant="ghost"
-        @click="handleSort"
-    >
+    <Button variant="ghost" @click="handleSort">
         {{ title }}
         <component :is="getSortIcon()" class="ml-2 h-4 w-4" />
     </Button>

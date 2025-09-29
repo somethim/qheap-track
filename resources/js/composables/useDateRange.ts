@@ -23,7 +23,6 @@ export function useDateRange(
 
     const hasBothDates = computed(() => startDate.value && endDate.value);
 
-    // Date preset calculations
     const todayDate = today('UTC');
 
     const setToday = () => {

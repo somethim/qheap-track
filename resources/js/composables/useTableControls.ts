@@ -16,10 +16,9 @@ export function useTableControls(pagination: Pagination) {
     const handlePageChange = (page: number) => {
         const currentParams = getCurrentParams();
         const maxPage = pagination.lastPage;
-        
-        // Ensure the page number is within valid bounds
+
         const targetPage = Math.max(1, Math.min(page, maxPage));
-        
+
         router.get(
             orders.index.url({
                 query: {
@@ -43,15 +42,12 @@ export function useTableControls(pagination: Pagination) {
         const newPageSize = Number(pageSize);
         const totalItems = pagination.total;
         const maxPage = Math.ceil(totalItems / newPageSize);
-        
-        // Calculate which page to go to based on current position
-        // If current page would still be valid, stay on it
-        // Otherwise, go to the last available page
+
         let targetPage = pagination.currentPage;
         if (targetPage > maxPage) {
             targetPage = Math.max(1, maxPage);
         }
-        
+
         router.get(
             orders.index.url({
                 query: {
