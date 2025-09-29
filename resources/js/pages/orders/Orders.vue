@@ -1,13 +1,11 @@
 <script lang="ts" setup>
 import { DataTable } from '@/components/data-table';
-import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import orders from '@/routes/orders';
 import { BreadcrumbItem, PaginatedData } from '@/types';
 import { isClientOrder, Order } from '@/types/orders';
 import { Head, router } from '@inertiajs/vue3';
 import { ColumnDef } from '@tanstack/vue-table';
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
 import { computed, h, ref, watch } from 'vue';
 
 const props = defineProps<PaginatedData<Order>>();
@@ -27,6 +25,9 @@ const orderType = computed(() => {
 
 const currentStartDate = ref<string>();
 const currentEndDate = ref<string>();
+const currentSearchQuery = ref<string>('');
+const currentSortBy = ref<string>('created_at');
+const currentSortDirection = ref<'asc' | 'desc'>('desc');
 
 watch(
     () => props,
@@ -34,34 +35,41 @@ watch(
         const urlParams = new URLSearchParams(window.location.search);
         currentStartDate.value = urlParams.get('start_date') ?? undefined;
         currentEndDate.value = urlParams.get('end_date') ?? undefined;
+        currentSearchQuery.value = urlParams.get('search') ?? '';
+        currentSortBy.value = urlParams.get('sort_by') ?? 'created_at';
+        currentSortDirection.value =
+            (urlParams.get('sort_direction') as 'asc' | 'desc') ?? 'desc';
     },
     { immediate: true, deep: true },
 );
 
 const columns: ColumnDef<Order>[] = [
     {
-        accessorKey: 'order_number',
-        header: ({ column }) => {
-            const isSorted = column.getIsSorted();
-            let ArrowIcon = ArrowUpDown;
-            if (isSorted === 'asc') ArrowIcon = ArrowUp;
-            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
+        accessorKey: 'id',
+        enableSorting: true,
+        header: 'ID',
+        cell: ({ row }) => {
             return h(
-                Button,
+                'div',
                 {
-                    variant: 'ghost',
-                    onClick: () => column.toggleSorting(isSorted === 'asc'),
+                    class: 'text-left font-mono',
+                    title: row.original.id,
                 },
-                () => ['Order #', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
+                row.original.id,
             );
         },
+    },
+    {
+        accessorKey: 'order_number',
+        enableSorting: false,
+        header: () => h('div', { class: 'text-left' }, 'Order #'),
         cell: ({ row }) => {
             const orderNumber = row.original.order_number;
             const shortNumber = orderNumber.slice(-8);
             return h(
                 'div',
                 {
-                    class: 'text-left fo' + 'nt-mono',
+                    class: 'text-left font-mono',
                     title: orderNumber,
                 },
                 shortNumber,
@@ -69,26 +77,12 @@ const columns: ColumnDef<Order>[] = [
         },
     },
     {
-        accessorKey: 'entity',
+        id: `${orderType.value}_id`,
+        accessorKey: `${orderType.value}_id`,
+        enableSorting: true,
         accessorFn: (row) =>
             isClientOrder(row) ? row.client.name : row.supplier.name,
-        header: ({ column }) => {
-            const isSorted = column.getIsSorted();
-            let ArrowIcon = ArrowUpDown;
-            if (isSorted === 'asc') ArrowIcon = ArrowUp;
-            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
-            return h(
-                Button,
-                {
-                    variant: 'ghost',
-                    onClick: () => column.toggleSorting(isSorted === 'asc'),
-                },
-                () => [
-                    orderType.value === 'client' ? 'Client' : 'Supplier',
-                    h(ArrowIcon, { class: 'ml-2 h-4 w-4' }),
-                ],
-            );
-        },
+        header: orderType.value === 'client' ? 'Client' : 'Supplier',
         cell: ({ row }) => {
             const order = row.original;
             if (isClientOrder(order)) {
@@ -98,21 +92,10 @@ const columns: ColumnDef<Order>[] = [
         },
     },
     {
+        id: 'total_amount',
         accessorKey: 'total_amount',
-        header: ({ column }) => {
-            const isSorted = column.getIsSorted();
-            let ArrowIcon = ArrowUpDown;
-            if (isSorted === 'asc') ArrowIcon = ArrowUp;
-            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
-            return h(
-                Button,
-                {
-                    variant: 'ghost',
-                    onClick: () => column.toggleSorting(isSorted === 'asc'),
-                },
-                () => ['Price', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
-            );
-        },
+        enableSorting: true,
+        header: 'Price',
         cell: ({ row }) => {
             const amount = Number.parseFloat(row.getValue('total_amount'));
             const formatted = new Intl.NumberFormat('sq-AL', {
@@ -124,41 +107,19 @@ const columns: ColumnDef<Order>[] = [
         },
     },
     {
+        id: 'item_count',
         accessorKey: 'item_count',
-        header: ({ column }) => {
-            const isSorted = column.getIsSorted();
-            let ArrowIcon = ArrowUpDown;
-            if (isSorted === 'asc') ArrowIcon = ArrowUp;
-            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
-            return h(
-                Button,
-                {
-                    variant: 'ghost',
-                    onClick: () => column.toggleSorting(isSorted === 'asc'),
-                },
-                () => ['Quantity', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
-            );
-        },
+        enableSorting: true,
+        header: 'Quantity',
         cell: ({ row }) => {
             return h('span', row.original.item_count);
         },
     },
     {
+        id: 'created_at',
         accessorKey: 'created_at',
-        header: ({ column }) => {
-            const isSorted = column.getIsSorted();
-            let ArrowIcon = ArrowUpDown;
-            if (isSorted === 'asc') ArrowIcon = ArrowUp;
-            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
-            return h(
-                Button,
-                {
-                    variant: 'ghost',
-                    onClick: () => column.toggleSorting(isSorted === 'asc'),
-                },
-                () => ['Created At', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
-            );
-        },
+        enableSorting: true,
+        header: 'Created At',
         cell: ({ row }) => {
             return h(
                 'div',
@@ -176,6 +137,36 @@ const orderClick = (row: Order) => {
 const addOrder = () => {
     router.visit(orders.create().url);
 };
+
+const search = (query: string) => {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    if (query.trim()) {
+        urlParams.set('search', query.trim());
+    } else {
+        urlParams.delete('search');
+    }
+
+    urlParams.set('page', '1');
+
+    router.visit(`${window.location.pathname}?${urlParams.toString()}`, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    urlParams.set('sort_by', sortBy);
+    urlParams.set('sort_direction', sortDirection);
+    urlParams.set('page', '1');
+
+    router.visit(`${window.location.pathname}?${urlParams.toString()}`, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
 </script>
 
 <template>
@@ -187,8 +178,13 @@ const addOrder = () => {
                 :columns="columns"
                 :data="props.items"
                 :end-date="currentEndDate"
+                :on-sort="handleSort"
                 :pagination="props.pagination"
                 :row-click="orderClick"
+                :search="search"
+                :search-query="currentSearchQuery"
+                :sort-by="currentSortBy"
+                :sort-direction="currentSortDirection"
                 :start-date="currentStartDate"
             />
         </div>

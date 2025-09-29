@@ -21,6 +21,9 @@ class OrderIndexRequest extends FormRequest
             'end_date' => ['sometimes', 'nullable', 'date', 'after_or_equal:start_date'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'sort_by' => ['sometimes', 'string'],
+            'sort_direction' => ['sometimes', 'string', 'in:asc,desc'],
+            'search' => ['sometimes', 'string', 'max:255'],
         ];
     }
 
@@ -58,5 +61,20 @@ class OrderIndexRequest extends FormRequest
     public function getOrderType(): string
     {
         return $this->query('type', 'client');
+    }
+
+    public function getSortBy(): string
+    {
+        return $this->query('sort_by', 'created_at');
+    }
+
+    public function getSortDirection(): string
+    {
+        return $this->query('sort_direction', 'desc');
+    }
+
+    public function getSearchTerm(): ?string
+    {
+        return $this->query('search', null);
     }
 }

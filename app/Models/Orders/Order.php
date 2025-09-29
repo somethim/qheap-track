@@ -29,12 +29,12 @@ class Order extends Model
 
     public static function clientOrders(): Builder
     {
-        return self::query()->whereNotNull('client_id')->orderByDesc('created_at');
+        return self::query()->whereNotNull('client_id');
     }
 
     public static function supplierOrders(): Builder
     {
-        return self::query()->whereNotNull('supplier_id')->orderByDesc('created_at');
+        return self::query()->whereNotNull('supplier_id');
     }
 
     protected static function booted(): void
@@ -86,6 +86,28 @@ class Order extends Model
             'id',
             'product_id'
         );
+    }
+
+    public function scopeOrderByTotalAmount(Builder $query, string $direction = 'asc'): Builder
+    {
+        return $query->select('orders.*')
+            ->addSelect([
+                'total_amount_calc' => OrderProduct::query()
+                    ->selectRaw('COALESCE(SUM(quantity * price), 0)')
+                    ->whereColumn('order_id', 'orders.id'),
+            ])
+            ->orderBy('total_amount_calc', $direction);
+    }
+
+    public function scopeOrderByItemCount(Builder $query, string $direction = 'asc'): Builder
+    {
+        return $query->select('orders.*')
+            ->addSelect([
+                'item_count_calc' => OrderProduct::query()
+                    ->selectRaw('COALESCE(SUM(quantity), 0)')
+                    ->whereColumn('order_id', 'orders.id'),
+            ])
+            ->orderBy('item_count_calc', $direction);
     }
 
     protected function totalAmount(): Attribute

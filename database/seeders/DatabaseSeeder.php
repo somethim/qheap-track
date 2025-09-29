@@ -26,11 +26,11 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@example.com',
         ]);
 
-        $productCount = 1000;
-        $clientCount = 100;
+        $productCount = 100;
+        $clientCount = 10;
         $supplierCount = 10;
-        $ordersPerClient = 100;
-        $ordersPerSupplier = 1000;
+        $ordersPerClient = 10;
+        $ordersPerSupplier = 100;
 
         foreach (range(1, $productCount) as $i) {
             Product::create([
