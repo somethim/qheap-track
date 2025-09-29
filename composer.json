@@ -68,7 +68,8 @@
         ],
         "lint": [
             "vendor/bin/pint",
-            "npm run lint"
+            "bun run lint",
+            "bun run ts"
         ]
     },
     "extra": {

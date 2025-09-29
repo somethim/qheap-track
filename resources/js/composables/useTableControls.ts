@@ -1,6 +1,5 @@
-import orders from '@/routes/orders';
 import type { Pagination } from '@/types';
-import { router } from '@inertiajs/vue3';
+import type { QueryParams } from '@/wayfinder';
 
 const getCurrentParams = () => {
     const params = new URLSearchParams(window.location.search);
@@ -12,29 +11,23 @@ const getCurrentParams = () => {
     };
 };
 
-export function useTableControls(pagination: Pagination) {
+export function useTableControls(
+    pagination: Pagination,
+    onNavigate: (query: QueryParams) => void,
+) {
     const handlePageChange = (page: number) => {
         const currentParams = getCurrentParams();
         const maxPage = pagination.lastPage;
 
         const targetPage = Math.max(1, Math.min(page, maxPage));
 
-        router.get(
-            orders.index.url({
-                query: {
-                    page: targetPage,
-                    per_page: currentParams.perPage || pagination.perPage,
-                    type: currentParams.type,
-                    start_date: currentParams.startDate,
-                    end_date: currentParams.endDate,
-                },
-            }),
-            {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-            },
-        );
+        onNavigate({
+            page: targetPage,
+            per_page: currentParams.perPage || pagination.perPage,
+            type: currentParams.type,
+            start_date: currentParams.startDate,
+            end_date: currentParams.endDate,
+        });
     };
 
     const handlePageSizeChange = (pageSize: number | string) => {
@@ -48,22 +41,13 @@ export function useTableControls(pagination: Pagination) {
             targetPage = Math.max(1, maxPage);
         }
 
-        router.get(
-            orders.index.url({
-                query: {
-                    page: targetPage,
-                    per_page: pageSize,
-                    type: currentParams.type,
-                    start_date: currentParams.startDate,
-                    end_date: currentParams.endDate,
-                },
-            }),
-            {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-            },
-        );
+        onNavigate({
+            page: targetPage,
+            per_page: pageSize,
+            type: currentParams.type,
+            start_date: currentParams.startDate,
+            end_date: currentParams.endDate,
+        });
     };
 
     const handleFiltersChange = (filters: {
@@ -71,22 +55,13 @@ export function useTableControls(pagination: Pagination) {
         endDate: string | null;
     }) => {
         const currentParams = getCurrentParams();
-        router.get(
-            orders.index.url({
-                query: {
-                    page: 1,
-                    per_page: currentParams.perPage || pagination.perPage,
-                    type: currentParams.type,
-                    start_date: filters.startDate,
-                    end_date: filters.endDate,
-                },
-            }),
-            {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-            },
-        );
+        onNavigate({
+            page: 1,
+            per_page: currentParams.perPage || pagination.perPage,
+            type: currentParams.type,
+            start_date: filters.startDate,
+            end_date: filters.endDate,
+        });
     };
 
     return {

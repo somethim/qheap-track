@@ -50,12 +50,12 @@ class OrderIndexRequest extends FormRequest
 
     public function getStartDate(): ?Carbon
     {
-        return $this->query('start_date') ? Carbon::parse($this->query('start_date')) : null;
+        return $this->query('start_date') ? Carbon::parse($this->query('start_date'))->startOfDay() : null;
     }
 
     public function getEndDate(): ?Carbon
     {
-        return $this->query('end_date') ? Carbon::parse($this->query('end_date')) : null;
+        return $this->query('end_date') ? Carbon::parse($this->query('end_date'))->endOfDay() : null;
     }
 
     public function getOrderType(): string

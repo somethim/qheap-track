@@ -15,19 +15,12 @@ class OrderController extends Controller
 {
     public function index(OrderIndexRequest $request): Response
     {
-        $type = $request->getOrderType();
-        $startDate = $request->getStartDate();
-        $endDate = $request->getEndDate();
-        $sortBy = $request->getSortBy();
-        $sortDirection = $request->getSortDirection();
-        $searchTerm = $request->getSearchTerm();
-
-        $query = match ($type) {
+        $query = match ($type = $request->getOrderType()) {
             OrderType::CLIENT->value => Order::clientOrders()->with(['client']),
             OrderType::SUPPLIER->value => Order::supplierOrders()->with(['supplier']),
         };
 
-        if ($searchTerm) {
+        if ($searchTerm = $request->getSearchTerm()) {
             $query->where(function ($q) use ($searchTerm, $type) {
                 $q->where('order_number', 'like', "%$searchTerm%");
 
@@ -43,6 +36,8 @@ class OrderController extends Controller
             });
         }
 
+        $sortBy = $request->getSortBy();
+        $sortDirection = $request->getSortDirection();
         if ($sortBy && $sortDirection) {
             switch ($sortBy) {
                 case 'total_amount':
@@ -61,10 +56,10 @@ class OrderController extends Controller
             $query->orderBy('created_at', 'desc');
         }
 
-        if ($startDate) {
+        if ($startDate = $request->getStartDate()) {
             $query->where('created_at', '>=', $startDate);
         }
-        if ($endDate) {
+        if ($endDate = $request->getEndDate()) {
             $query->where('created_at', '<=', $endDate);
         }
 

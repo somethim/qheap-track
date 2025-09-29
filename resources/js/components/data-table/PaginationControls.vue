@@ -1,41 +1,45 @@
 <script lang="ts" setup>
 import { Button } from '@/components/ui/button';
+import type { Pagination } from '@/types';
 import {
     ChevronLeft,
     ChevronRight,
     ChevronsLeft,
     ChevronsRight,
 } from 'lucide-vue-next';
+import { computed } from 'vue';
 
-const { currentPage, totalPages, canPreviousPage, canNextPage } = defineProps<{
-    currentPage: number;
-    totalPages: number;
-    canPreviousPage: boolean;
-    canNextPage: boolean;
+const props = defineProps<{
+    pagination: Pagination;
 }>();
 
 const emit = defineEmits<{
     'page-change': [page: number];
 }>();
 
+// Direct computed properties for pagination state
+const canPreviousPage = computed(() => !!props.pagination.prevPageUrl);
+const canNextPage = computed(() => props.pagination.hasMorePages);
+
+// Direct event handlers
 const handleFirstPage = () => {
     emit('page-change', 1);
 };
 
 const handlePreviousPage = () => {
-    if (canPreviousPage && currentPage > 1) {
-        emit('page-change', currentPage - 1);
+    if (canPreviousPage.value && props.pagination.currentPage > 1) {
+        emit('page-change', props.pagination.currentPage - 1);
     }
 };
 
 const handleNextPage = () => {
-    if (canNextPage && currentPage < totalPages) {
-        emit('page-change', currentPage + 1);
+    if (canNextPage.value && props.pagination.currentPage < props.pagination.lastPage) {
+        emit('page-change', props.pagination.currentPage + 1);
     }
 };
 
 const handleLastPage = () => {
-    emit('page-change', totalPages);
+    emit('page-change', props.pagination.lastPage);
 };
 </script>
 

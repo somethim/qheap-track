@@ -4,9 +4,10 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import orders from '@/routes/orders';
 import { BreadcrumbItem, PaginatedData } from '@/types';
 import { isClientOrder, Order } from '@/types/orders';
+import type { QueryParams } from '@/wayfinder';
 import { Head, router } from '@inertiajs/vue3';
 import { ColumnDef } from '@tanstack/vue-table';
-import { computed, h, ref, watch } from 'vue';
+import { computed, h, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<PaginatedData<Order>>();
 
@@ -152,6 +153,43 @@ const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
         preserveScroll: true,
     });
 };
+
+const handleNavigate = (query: QueryParams) => {
+    router.get(
+        orders.index.url({ query }),
+        {},
+        {
+            preserveState: true,
+            preserveScroll: true,
+        },
+    );
+};
+
+onMounted(() => {
+    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    const isPageRefresh = navigationEntry?.type === 'reload';
+    
+    if (isPageRefresh) {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        const hasFilters = urlParams.has('search') ||
+                          urlParams.has('start_date') ||
+                          urlParams.has('end_date') ||
+                          urlParams.has('sort_by') ||
+                          urlParams.has('sort_direction') ||
+                          (urlParams.has('page') && urlParams.get('page') !== '1') ||
+                          (urlParams.has('per_page') && urlParams.get('per_page') !== '10');
+
+        if (hasFilters) {
+            router.get(orders.index().url, {}, {
+                preserveState: false,
+                preserveScroll: false,
+                replace: true,
+            });
+        }
+    }
+});
+
 </script>
 
 <template>
@@ -163,6 +201,7 @@ const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
                 :columns="columns"
                 :data="props.items"
                 :end-date="currentEndDate"
+                :on-navigate="handleNavigate"
                 :on-sort="handleSort"
                 :pagination="props.pagination"
                 :row-click="orderClick"

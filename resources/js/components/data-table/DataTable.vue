@@ -1,5 +1,5 @@
 <script generic="TData, TValue" lang="ts" setup>
-import type { ColumnDef } from '@tanstack/vue-table';
+import type { Column, ColumnDef } from '@tanstack/vue-table';
 import {
     getCoreRowModel,
     getFilteredRowModel,
@@ -12,17 +12,17 @@ import TablePagination from '@/components/data-table/TablePagination.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table } from '@/components/ui/table';
-import { useDateRange } from '@/composables/useDateRange';
-import { useTableControls } from '@/composables/useTableControls';
+import { useDataTable } from '@/composables/useDataTable';
 import { Pagination } from '@/types';
-import { parseDate } from '@internationalized/date';
+import type { QueryParams } from '@/wayfinder';
 import { Plus } from 'lucide-vue-next';
-import { computed, h, ref, watch } from 'vue';
+import { computed, h } from 'vue';
 import DatePicker from './DatePicker.vue';
 import DatePresets from './DatePresets.vue';
 import SortableHeader from './SortableHeader.vue';
 import TableBody from './TableBody.vue';
 import TableHeader from './TableHeader.vue';
+import TableInfo from './TableInfo.vue';
 
 const props = defineProps<{
     columns: ColumnDef<TData, TValue>[];
@@ -37,118 +37,70 @@ const props = defineProps<{
     addItem?: () => void;
     search?: (query: string) => void;
     onSort?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
+    onNavigate?: (query: QueryParams) => void;
 }>();
 
-const startDate = ref<string | null>(props.startDate || null);
-const endDate = ref<string | null>(props.endDate || null);
-const searchQuery = ref<string>(props.searchQuery || '');
-
-watch(
-    () => props.startDate,
-    (newValue) => {
-        startDate.value = newValue || null;
+const dataTableControls = useDataTable({
+    data: props.data,
+    columns: props.columns,
+    pagination: props.pagination,
+    initialState: {
+        startDate: props.startDate,
+        endDate: props.endDate,
+        searchQuery: props.searchQuery,
+        sortBy: props.sortBy,
+        sortDirection: props.sortDirection,
     },
-);
-
-watch(
-    () => props.endDate,
-    (newValue) => {
-        endDate.value = newValue || null;
-    },
-);
-
-watch(
-    () => props.searchQuery,
-    (newValue) => {
-        searchQuery.value = newValue || '';
-    },
-);
-
-watch(searchQuery, (newValue) => {
-    if (props.search) {
-        props.search(newValue);
-    }
+    onNavigate: props.onNavigate || (() => {}),
+    onRowClick: props.rowClick,
+    onAddItem: props.addItem,
+    onSearch: props.search,
+    onSort: props.onSort,
 });
 
-const { handlePageChange, handlePageSizeChange, handleFiltersChange } =
-    useTableControls(props.pagination);
 const {
+    startDate: currentStartDate,
+    endDate: currentEndDate,
+    searchQuery: currentSearchQuery,
+    sortBy: currentSortBy,
+    sortDirection: currentSortDirection,
     startDateMax,
     endDateMin,
     hasBothDates,
-    setToday,
-    setLastWeek,
-    setLastMonth,
-    setLastYear,
-} = useDateRange(startDate, endDate);
-
-const clearDates = () => {
-    startDate.value = null;
-    endDate.value = null;
-    handleFiltersChange({ startDate: null, endDate: null });
-};
-
-const handleStartDateChange = (date: string | null) => {
-    startDate.value = date;
-    if (
-        endDate.value &&
-        date &&
-        parseDate(date).compare(parseDate(endDate.value)) > 0
-    ) {
-        endDate.value = null;
-    }
-    handleFiltersChange({ startDate: date, endDate: endDate.value });
-};
-
-const handleEndDateChange = (date: string | null) => {
-    endDate.value = date;
-    if (
-        startDate.value &&
-        date &&
-        parseDate(startDate.value).compare(parseDate(date)) > 0
-    ) {
-        startDate.value = null;
-    }
-    handleFiltersChange({ startDate: startDate.value, endDate: date });
-};
-
-const handleToday = () => {
-    setToday();
-    handleFiltersChange({ startDate: startDate.value, endDate: endDate.value });
-};
-
-const handleLastWeek = () => {
-    setLastWeek();
-    handleFiltersChange({ startDate: startDate.value, endDate: endDate.value });
-};
-
-const handleLastMonth = () => {
-    setLastMonth();
-    handleFiltersChange({ startDate: startDate.value, endDate: endDate.value });
-};
-
-const handleLastYear = () => {
-    setLastYear();
-    handleFiltersChange({ startDate: startDate.value, endDate: endDate.value });
-};
+    handleStartDateChange,
+    handleEndDateChange,
+    handleToday,
+    handleLastWeek,
+    handleLastMonth,
+    handleLastYear,
+    clearDates,
+    handlePageChange,
+    handlePageSizeChange,
+    handleSort,
+} = dataTableControls;
 
 const processedColumns = computed(() => {
     return props.columns.map((column) => {
         if (
-            (column as any).enableSorting &&
+            (column as ColumnDef<TData, TValue> & { enableSorting?: boolean })
+                .enableSorting &&
             typeof column.header === 'string'
         ) {
             const title = column.header;
             return {
                 ...column,
                 enableSorting: true,
-                header: ({ column: tableColumn }: { column: any }) => {
+                header: ({
+                    column: tableColumn,
+                }: {
+                    column: Column<TData, TValue>;
+                }) => {
                     return h(SortableHeader, {
                         column: tableColumn,
                         title,
-                        sortBy: props.sortBy,
-                        sortDirection: props.sortDirection,
-                        onSort: props.onSort,
+                        sortBy: currentSortBy.value,
+                        sortDirection: currentSortDirection.value,
+                        onSort: handleSort,
                     });
                 },
             };
@@ -176,8 +128,13 @@ const table = useVueTable({
             pageSize: props.pagination.perPage,
         },
         sorting:
-            props.sortBy && props.sortDirection
-                ? [{ id: props.sortBy, desc: props.sortDirection === 'desc' }]
+            currentSortBy.value && currentSortDirection.value
+                ? [
+                      {
+                          id: currentSortBy.value,
+                          desc: currentSortDirection.value === 'desc',
+                      },
+                  ]
                 : [],
     },
 });
@@ -190,13 +147,13 @@ const table = useVueTable({
             <div class="flex items-center space-x-2">
                 <DatePicker
                     :max-value="startDateMax"
-                    :value="startDate"
+                    :value="currentStartDate"
                     label="Start Date"
                     @update:value="handleStartDateChange"
                 />
                 <DatePicker
                     :min-value="endDateMin"
-                    :value="endDate"
+                    :value="currentEndDate"
                     label="End Date"
                     @update:value="handleEndDateChange"
                 />
@@ -211,18 +168,18 @@ const table = useVueTable({
             </div>
             <div class="flex items-center space-x-2">
                 <Input
-                    v-model="searchQuery"
+                    v-model="currentSearchQuery"
                     class="w-64"
                     placeholder="Search..."
                 />
-                <Button v-if="addItem" size="sm" @click="addItem">
+                <Button v-if="props.addItem" size="sm" @click="props.addItem">
                     <Plus class="mr-2 h-4 w-4" />
                     Add
                 </Button>
             </div>
         </div>
 
-        <!-- Date presets left, Pagination right -->
+        <!-- Date presets left, Table info center, Pagination right -->
         <div class="flex items-center justify-between">
             <DatePresets
                 :on-last-month="handleLastMonth"
@@ -230,6 +187,7 @@ const table = useVueTable({
                 :on-last-year="handleLastYear"
                 :on-today="handleToday"
             />
+            <TableInfo :pagination="props.pagination" />
             <TablePagination
                 :pagination="props.pagination"
                 :table="table"

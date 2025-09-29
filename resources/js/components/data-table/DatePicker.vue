@@ -6,20 +6,11 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-    CalendarDate,
-    DateFormatter,
-    parseDate,
-    today,
-} from '@internationalized/date';
+import { useDatePicker } from '@/composables/useDatePicker';
+import { CalendarDate, today } from '@internationalized/date';
 import { Calendar as CalendarIcon } from 'lucide-vue-next';
-import { DateValue } from 'reka-ui';
 import { toDate } from 'reka-ui/date';
-import { computed, ref } from 'vue';
-
-const df = new DateFormatter('en-US', {
-    dateStyle: 'long',
-});
+import { ref, watch } from 'vue';
 
 const props = defineProps<{
     value?: string | null;
@@ -32,23 +23,19 @@ const emit = defineEmits<{
     'update:value': [date: string | null];
 }>();
 
-const isOpen = ref(false);
+const valueRef = ref(props.value || null);
 
-const dateValue = computed({
-    get: () => (props.value ? parseDate(props.value) : undefined),
-    set: (val) => {
-        handleDateChange(val);
+const { isOpen, dateValue, dateFormatter, handleDateChange } = useDatePicker(
+    valueRef,
+    (date: string | null) => emit('update:value', date),
+);
+
+watch(
+    () => props.value,
+    (newValue) => {
+        valueRef.value = newValue || null;
     },
-});
-
-const handleDateChange = (date: DateValue | undefined) => {
-    if (date) {
-        emit('update:value', date.toString());
-    } else {
-        emit('update:value', null);
-    }
-    isOpen.value = false;
-};
+);
 </script>
 
 <template>
@@ -56,7 +43,11 @@ const handleDateChange = (date: DateValue | undefined) => {
         <PopoverTrigger as-child>
             <Button class="ps-3 text-start font-normal" variant="outline">
                 <span>
-                    {{ dateValue ? df.format(toDate(dateValue)) : label }}
+                    {{
+                        dateValue
+                            ? dateFormatter.format(toDate(dateValue))
+                            : label
+                    }}
                 </span>
                 <CalendarIcon class="ms-auto h-4 w-4 opacity-50" />
             </Button>
@@ -64,7 +55,7 @@ const handleDateChange = (date: DateValue | undefined) => {
         <PopoverContent class="w-auto p-0">
             <Calendar
                 :calendar-label="label"
-                :max-value="maxValue || today('utc')"
+                :max-value="maxValue || today('UTC')"
                 :min-value="minValue"
                 :model-value="dateValue"
                 initial-focus

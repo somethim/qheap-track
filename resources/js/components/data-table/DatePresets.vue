@@ -23,9 +23,9 @@ const presets = [
             <Button
                 v-for="preset in presets"
                 :key="preset.label"
+                class="h-8 px-2 text-xs"
                 size="sm"
                 variant="ghost"
-                class="h-8 px-2 text-xs"
                 @click="preset.handler"
             >
                 {{ preset.label }}
