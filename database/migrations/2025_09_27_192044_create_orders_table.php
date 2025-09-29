@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('client_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId('supplier_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->uuid('order_number')->unique();
             $table->timestamps();
         });
 

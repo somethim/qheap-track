@@ -36,20 +36,22 @@ export interface User {
     updated_at: string;
 }
 
-export type Pagination<T> = {
+export type Pagination = {
+    firstPage: number;
+    currentPage: number;
+    lastPage: number;
+    firstPageUrl: string | null;
+    lastPageUrl: string | null;
+    perPage: number;
+    nextPageUrl: string | null;
+    prevPageUrl: string | null;
+    total: number;
+    hasMorePages: boolean;
+};
+
+export type PaginatedData<T> = {
     items: T[];
-    pagination: {
-        firstPage: number;
-        currentPage: number;
-        lastPage: number;
-        firstPageUrl: string | null;
-        lastPageUrl: string | null;
-        perPage: number;
-        nextPageUrl: string | null;
-        prevPageUrl: string | null;
-        total: number;
-        hasMorePages: boolean;
-    };
+    pagination: Pagination;
 };
 
 export type BreadcrumbItemType = BreadcrumbItem;

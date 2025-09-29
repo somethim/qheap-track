@@ -1,35 +1,17 @@
 <script lang="ts" setup>
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+import { DataTable } from '@/components/data-table';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import orders from '@/routes/orders';
-import { BreadcrumbItem, Pagination } from '@/types';
-import { Order } from '@/types/orders';
-import { Head } from '@inertiajs/vue3';
-import {
-    ColumnFiltersState,
-    ExpandedState,
-    FlexRender,
-    getCoreRowModel,
-    getExpandedRowModel,
-    getFilteredRowModel,
-    getPaginationRowModel,
-    getSortedRowModel,
-    SortingState,
-    useVueTable,
-    VisibilityState,
-} from '@tanstack/vue-table';
+import { BreadcrumbItem, PaginatedData } from '@/types';
+import { isClientOrder, Order } from '@/types/orders';
+import { Head, router } from '@inertiajs/vue3';
+import { ColumnDef } from '@tanstack/vue-table';
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
+import { computed, h, ref, watch } from 'vue';
 
-import { valueUpdater } from '@/components/ui/table/utils';
-import { ref } from 'vue';
+const props = defineProps<PaginatedData<Order>>();
 
-const { paginated } = defineProps<{ paginated: Pagination<Order> }>();
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Orders',
@@ -37,110 +19,173 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const sorting = ref<SortingState>([]);
-const columnFilters = ref<ColumnFiltersState>([]);
-const columnVisibility = ref<VisibilityState>({});
-const rowSelection = ref({});
-const expanded = ref<ExpandedState>({});
+const orderType = computed(() => {
+    return props.items.length > 0 && isClientOrder(props.items[0])
+        ? 'client'
+        : 'supplier';
+});
 
-const table = useVueTable({
-    paginated,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getExpandedRowModel: getExpandedRowModel(),
-    onSortingChange: (updaterOrValue) => valueUpdater(updaterOrValue, sorting),
-    onColumnFiltersChange: (updaterOrValue) =>
-        valueUpdater(updaterOrValue, columnFilters),
-    onColumnVisibilityChange: (updaterOrValue) =>
-        valueUpdater(updaterOrValue, columnVisibility),
-    onRowSelectionChange: (updaterOrValue) =>
-        valueUpdater(updaterOrValue, rowSelection),
-    onExpandedChange: (updaterOrValue) =>
-        valueUpdater(updaterOrValue, expanded),
-    state: {
-        get sorting() {
-            return sorting.value;
+const currentStartDate = ref<string>();
+const currentEndDate = ref<string>();
+
+watch(
+    () => props,
+    () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        currentStartDate.value = urlParams.get('start_date') ?? undefined;
+        currentEndDate.value = urlParams.get('end_date') ?? undefined;
+    },
+    { immediate: true, deep: true },
+);
+
+const columns: ColumnDef<Order>[] = [
+    {
+        accessorKey: 'order_number',
+        header: ({ column }) => {
+            const isSorted = column.getIsSorted();
+            let ArrowIcon = ArrowUpDown;
+            if (isSorted === 'asc') ArrowIcon = ArrowUp;
+            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
+            return h(
+                Button,
+                {
+                    variant: 'ghost',
+                    onClick: () => column.toggleSorting(isSorted === 'asc'),
+                },
+                () => ['Order #', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
+            );
         },
-        get columnFilters() {
-            return columnFilters.value;
-        },
-        get columnVisibility() {
-            return columnVisibility.value;
-        },
-        get rowSelection() {
-            return rowSelection.value;
-        },
-        get expanded() {
-            return expanded.value;
+        cell: ({ row }) => {
+            return h(
+                'div',
+                { class: 'text-left font-mono' },
+                row.original.order_number,
+            );
         },
     },
-});
+    {
+        accessorKey: 'entity',
+        accessorFn: (row) =>
+            isClientOrder(row) ? row.client.name : row.supplier.name,
+        header: ({ column }) => {
+            const isSorted = column.getIsSorted();
+            let ArrowIcon = ArrowUpDown;
+            if (isSorted === 'asc') ArrowIcon = ArrowUp;
+            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
+            return h(
+                Button,
+                {
+                    variant: 'ghost',
+                    onClick: () => column.toggleSorting(isSorted === 'asc'),
+                },
+                () => [
+                    orderType.value === 'client' ? 'Client' : 'Supplier',
+                    h(ArrowIcon, { class: 'ml-2 h-4 w-4' }),
+                ],
+            );
+        },
+        cell: ({ row }) => {
+            const order = row.original;
+            if (isClientOrder(order)) {
+                return h('span', order.client.name);
+            }
+            return h('span', order.supplier.name);
+        },
+    },
+    {
+        accessorKey: 'total_amount',
+        header: ({ column }) => {
+            const isSorted = column.getIsSorted();
+            let ArrowIcon = ArrowUpDown;
+            if (isSorted === 'asc') ArrowIcon = ArrowUp;
+            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
+            return h(
+                Button,
+                {
+                    variant: 'ghost',
+                    onClick: () => column.toggleSorting(isSorted === 'asc'),
+                },
+                () => ['Price', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
+            );
+        },
+        cell: ({ row }) => {
+            const amount = Number.parseFloat(row.getValue('total_amount'));
+            const formatted = new Intl.NumberFormat('sq-AL', {
+                style: 'currency',
+                currency: 'ALL',
+            }).format(amount);
+
+            return h('div', { class: 'text-left font-mono' }, formatted);
+        },
+    },
+    {
+        accessorKey: 'item_count',
+        header: ({ column }) => {
+            const isSorted = column.getIsSorted();
+            let ArrowIcon = ArrowUpDown;
+            if (isSorted === 'asc') ArrowIcon = ArrowUp;
+            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
+            return h(
+                Button,
+                {
+                    variant: 'ghost',
+                    onClick: () => column.toggleSorting(isSorted === 'asc'),
+                },
+                () => ['Quantity', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
+            );
+        },
+        cell: ({ row }) => {
+            return h('span', row.original.item_count);
+        },
+    },
+    {
+        accessorKey: 'created_at',
+        header: ({ column }) => {
+            const isSorted = column.getIsSorted();
+            let ArrowIcon = ArrowUpDown;
+            if (isSorted === 'asc') ArrowIcon = ArrowUp;
+            else if (isSorted === 'desc') ArrowIcon = ArrowDown;
+            return h(
+                Button,
+                {
+                    variant: 'ghost',
+                    onClick: () => column.toggleSorting(isSorted === 'asc'),
+                },
+                () => ['Created At', h(ArrowIcon, { class: 'ml-2 h-4 w-4' })],
+            );
+        },
+        cell: ({ row }) => {
+            return h(
+                'div',
+                { class: 'text-left font-mono' },
+                new Date(row.original.created_at).toLocaleDateString(),
+            );
+        },
+    },
+];
+
+const orderClick = (row: Order) => {
+    router.visit(orders.show(row.id).url);
+};
+
+const addOrder = () => {
+    router.visit(orders.create().url);
+};
 </script>
 
 <template>
     <Head title="Orders" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div
-            class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4"
-        >
-            <Table>
-                <TableHeader>
-                    <TableRow
-                        v-for="headerGroup in table.getHeaderGroups()"
-                        :key="headerGroup.id"
-                    >
-                        <TableHead
-                            v-for="header in headerGroup.headers"
-                            :key="header.id"
-                        >
-                            <FlexRender
-                                v-if="!header.isPlaceholder"
-                                :props="header.getContext()"
-                                :render="header.column.columnDef.header"
-                            />
-                        </TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    <template v-if="table.getRowModel().rows?.length">
-                        <template
-                            v-for="row in table.getRowModel().rows"
-                            :key="row.id"
-                        >
-                            <TableRow
-                                :data-state="row.getIsSelected() && 'selected'"
-                            >
-                                <TableCell
-                                    v-for="cell in row.getVisibleCells()"
-                                    :key="cell.id"
-                                >
-                                    <FlexRender
-                                        :props="cell.getContext()"
-                                        :render="cell.column.columnDef.cell"
-                                    />
-                                </TableCell>
-                            </TableRow>
-                            <TableRow v-if="row.getIsExpanded()">
-                                <TableCell :colspan="row.getAllCells().length">
-                                    {{ JSON.stringify(row.original) }}
-                                </TableCell>
-                            </TableRow>
-                        </template>
-                    </template>
-
-                    <TableRow v-else>
-                        <TableCell
-                            :colspan="columns.length"
-                            class="h-24 text-center"
-                        >
-                            No results.
-                        </TableCell>
-                    </TableRow>
-                </TableBody>
-            </Table>
+        <div class="flex h-full flex-1 flex-col gap-4 p-4">
+            <DataTable
+                :add-item="addOrder"
+                :columns="columns"
+                :data="props.items"
+                :end-date="currentEndDate"
+                :pagination="props.pagination"
+                :row-click="orderClick"
+                :start-date="currentStartDate"
+            />
         </div>
     </AppLayout>
 </template>

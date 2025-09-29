@@ -3,10 +3,11 @@ import NavMain from '@/components/NavMain.vue';
 import {
     Sidebar,
     SidebarContent,
+    SidebarFooter,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
-    SidebarMenuItem,
+    SidebarMenuItem
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import orders from '@/routes/orders';
@@ -46,6 +47,8 @@ const mainNavItems: NavItem[] = [
         <SidebarContent>
             <NavMain :items="mainNavItems" />
         </SidebarContent>
+
+        <SidebarFooter />
     </Sidebar>
     <slot />
 </template>

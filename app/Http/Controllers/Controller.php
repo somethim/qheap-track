@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 abstract class Controller
 {
@@ -13,33 +13,27 @@ abstract class Controller
     /**
      * Display a listing of the resource, paginated.
      */
-    protected function paginate(Request $request, array $data): array
+    protected function paginate(Request $request, Builder $query): array
     {
-        $perPage = max(1, (int) ($request->query('perPage', 15)));
-        $page = $request->integer($request->query('page', 1));
-        $collection = collect($data);
+        $perPageParam = $request->query('per_page', 50);
+        $perPage = max(1, (int) $perPageParam);
+        $page = max(1, (int) ($request->query('page', 1)));
 
-        $paginator = new LengthAwarePaginator(
-            $collection->forPage($page, $perPage),
-            $collection->count(),
-            $perPage,
-            $page,
-            ['path' => $request->url()]
-        );
+        $paginatedQuery = $query->paginate(perPage: $perPage, page: $page);
 
         return [
-            'items' => $paginator->items(),
+            'items' => $paginatedQuery->items(),
             'pagination' => [
                 'firstPage' => 1,
-                'currentPage' => $paginator->currentPage(),
-                'lastPage' => $paginator->lastPage(),
-                'firstPageUrl' => $paginator->url(1),
-                'lastPageUrl' => $paginator->url($paginator->lastPage()),
-                'perPage' => $paginator->perPage(),
-                'nextPageUrl' => $paginator->nextPageUrl(),
-                'prevPageUrl' => $paginator->previousPageUrl(),
-                'total' => $paginator->total(),
-                'hasMorePages' => $paginator->hasPages(),
+                'currentPage' => $paginatedQuery->currentPage(),
+                'lastPage' => $paginatedQuery->lastPage(),
+                'firstPageUrl' => $paginatedQuery->url(1),
+                'lastPageUrl' => $paginatedQuery->url($paginatedQuery->lastPage()),
+                'perPage' => $paginatedQuery->perPage(),
+                'nextPageUrl' => $paginatedQuery->nextPageUrl(),
+                'prevPageUrl' => $paginatedQuery->previousPageUrl(),
+                'total' => $paginatedQuery->total(),
+                'hasMorePages' => $paginatedQuery->hasMorePages(),
             ],
         ];
     }
