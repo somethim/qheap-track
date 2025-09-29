@@ -45,21 +45,6 @@ watch(
 
 const columns: ColumnDef<Order>[] = [
     {
-        accessorKey: 'id',
-        enableSorting: true,
-        header: 'ID',
-        cell: ({ row }) => {
-            return h(
-                'div',
-                {
-                    class: 'text-left font-mono',
-                    title: row.original.id,
-                },
-                row.original.id,
-            );
-        },
-    },
-    {
         accessorKey: 'order_number',
         enableSorting: false,
         header: () => h('div', { class: 'text-left' }, 'Order #'),
