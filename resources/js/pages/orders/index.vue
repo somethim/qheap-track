@@ -7,7 +7,7 @@ import { isClientOrder, Order } from '@/types/orders';
 import type { QueryParams } from '@/wayfinder';
 import { Head, router } from '@inertiajs/vue3';
 import { ColumnDef } from '@tanstack/vue-table';
-import { computed, h, onMounted, ref, watch } from 'vue';
+import { computed, h, onMounted } from 'vue';
 
 const props = defineProps<PaginatedData<Order>>();
 
@@ -24,24 +24,20 @@ const orderType = computed(() => {
         : 'supplier';
 });
 
-const currentStartDate = ref<string>();
-const currentEndDate = ref<string>();
-const currentSearchQuery = ref<string>('');
-const currentSortBy = ref<string>('created_at');
-const currentSortDirection = ref<'asc' | 'desc'>('desc');
+const urlParams = computed(() => new URLSearchParams(window.location.search));
 
-watch(
-    () => props,
-    () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        currentStartDate.value = urlParams.get('start_date') ?? undefined;
-        currentEndDate.value = urlParams.get('end_date') ?? undefined;
-        currentSearchQuery.value = urlParams.get('search') ?? '';
-        currentSortBy.value = urlParams.get('sort_by') ?? 'created_at';
-        currentSortDirection.value =
-            (urlParams.get('sort_direction') as 'asc' | 'desc') ?? 'desc';
-    },
-    { immediate: true, deep: true },
+const currentStartDate = computed(
+    () => urlParams.value.get('start_date') ?? undefined,
+);
+const currentEndDate = computed(
+    () => urlParams.value.get('end_date') ?? undefined,
+);
+const currentSearchQuery = computed(() => urlParams.value.get('search') ?? '');
+const currentSortBy = computed(
+    () => urlParams.value.get('sort_by') ?? 'created_at',
+);
+const currentSortDirection = computed(
+    () => (urlParams.value.get('sort_direction') as 'asc' | 'desc') ?? 'desc',
 );
 
 const columns: ColumnDef<Order>[] = [
@@ -78,12 +74,12 @@ const columns: ColumnDef<Order>[] = [
         },
     },
     {
-        id: 'total_amount',
-        accessorKey: 'total_amount',
+        id: 'cost',
+        accessorKey: 'cost',
         enableSorting: true,
         header: 'Price',
         cell: ({ row }) => {
-            const amount = Number.parseFloat(row.getValue('total_amount'));
+            const amount = Number.parseFloat(row.getValue('cost'));
             const formatted = new Intl.NumberFormat('sq-AL', {
                 style: 'currency',
                 currency: 'ALL',
@@ -93,12 +89,12 @@ const columns: ColumnDef<Order>[] = [
         },
     },
     {
-        id: 'item_count',
-        accessorKey: 'item_count',
+        id: 'quantity',
+        accessorKey: 'quantity',
         enableSorting: true,
         header: 'Quantity',
         cell: ({ row }) => {
-            return h('span', row.original.item_count);
+            return h('span', row.original.quantity);
         },
     },
     {
@@ -116,7 +112,7 @@ const columns: ColumnDef<Order>[] = [
     },
 ];
 
-const orderClick = (row: Order) => {
+const showOrder = (row: Order) => {
     router.visit(orders.show(row.id).url);
 };
 
@@ -125,30 +121,30 @@ const addOrder = () => {
 };
 
 const search = (query: string) => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const trimmedQuery = query.trim();
+    const newParams = new URLSearchParams(window.location.search);
 
-    if (query.trim()) {
-        urlParams.set('search', query.trim());
+    if (trimmedQuery) {
+        newParams.set('search', trimmedQuery);
     } else {
-        urlParams.delete('search');
+        newParams.delete('search');
     }
 
-    urlParams.set('page', '1');
+    newParams.set('page', '1');
 
-    router.visit(`${window.location.pathname}?${urlParams.toString()}`, {
+    router.visit(`${window.location.pathname}?${newParams.toString()}`, {
         preserveState: true,
         preserveScroll: true,
     });
 };
 
 const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.set('sort_by', sortBy);
+    newParams.set('sort_direction', sortDirection);
+    newParams.set('page', '1');
 
-    urlParams.set('sort_by', sortBy);
-    urlParams.set('sort_direction', sortDirection);
-    urlParams.set('page', '1');
-
-    router.visit(`${window.location.pathname}?${urlParams.toString()}`, {
+    router.visit(`${window.location.pathname}?${newParams.toString()}`, {
         preserveState: true,
         preserveScroll: true,
     });
@@ -166,51 +162,58 @@ const handleNavigate = (query: QueryParams) => {
 };
 
 onMounted(() => {
-    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+    const navigationEntry = performance.getEntriesByType(
+        'navigation',
+    )[0] as PerformanceNavigationTiming;
     const isPageRefresh = navigationEntry?.type === 'reload';
-    
+
     if (isPageRefresh) {
-        const urlParams = new URLSearchParams(window.location.search);
-        
-        const hasFilters = urlParams.has('search') ||
-                          urlParams.has('start_date') ||
-                          urlParams.has('end_date') ||
-                          urlParams.has('sort_by') ||
-                          urlParams.has('sort_direction') ||
-                          (urlParams.has('page') && urlParams.get('page') !== '1') ||
-                          (urlParams.has('per_page') && urlParams.get('per_page') !== '10');
+        const currentParams = urlParams.value;
+        const hasFilters =
+            currentParams.has('search') ||
+            currentParams.has('start_date') ||
+            currentParams.has('end_date') ||
+            currentParams.has('sort_by') ||
+            currentParams.has('sort_direction') ||
+            (currentParams.has('page') && currentParams.get('page') !== '1') ||
+            (currentParams.has('per_page') &&
+                currentParams.get('per_page') !== '10');
 
         if (hasFilters) {
-            router.get(orders.index().url, {}, {
-                preserveState: false,
-                preserveScroll: false,
-                replace: true,
-            });
+            router.get(
+                orders.index().url,
+                {},
+                {
+                    preserveState: false,
+                    preserveScroll: false,
+                    replace: true,
+                },
+            );
         }
     }
 });
-
 </script>
 
 <template>
     <Head title="Orders" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 p-4">
-            <DataTable
-                :add-item="addOrder"
-                :columns="columns"
-                :data="props.items"
-                :end-date="currentEndDate"
-                :on-navigate="handleNavigate"
-                :on-sort="handleSort"
-                :pagination="props.pagination"
-                :row-click="orderClick"
-                :search="search"
-                :search-query="currentSearchQuery"
-                :sort-by="currentSortBy"
-                :sort-direction="currentSortDirection"
-                :start-date="currentStartDate"
-            />
-        </div>
+        <DataTable
+            :add-item="addOrder"
+            :columns="columns"
+            :data="props.items"
+            :end-date="currentEndDate"
+            :on-navigate="handleNavigate"
+            :on-sort="handleSort"
+            :pagination="props.pagination"
+            :row-click="showOrder"
+            :search="search"
+            :search-query="currentSearchQuery"
+            :show-date-controls="true"
+            :show-pagination="true"
+            :show-search="true"
+            :sort-by="currentSortBy"
+            :sort-direction="currentSortDirection"
+            :start-date="currentStartDate"
+        />
     </AppLayout>
 </template>

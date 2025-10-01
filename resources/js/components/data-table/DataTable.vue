@@ -19,6 +19,7 @@ import { Plus } from 'lucide-vue-next';
 import { computed, h } from 'vue';
 import DatePicker from './DatePicker.vue';
 import DatePresets from './DatePresets.vue';
+import EditingButtons from './EditingButtons.vue';
 import SortableHeader from './SortableHeader.vue';
 import TableBody from './TableBody.vue';
 import TableHeader from './TableHeader.vue';
@@ -27,7 +28,7 @@ import TableInfo from './TableInfo.vue';
 const props = defineProps<{
     columns: ColumnDef<TData, TValue>[];
     data: TData[];
-    pagination: Pagination;
+    pagination?: Pagination;
     startDate?: string;
     endDate?: string;
     searchQuery?: string;
@@ -38,12 +39,42 @@ const props = defineProps<{
     search?: (query: string) => void;
     onSort?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
     onNavigate?: (query: QueryParams) => void;
+    editing?: boolean;
+    onSaveAll?: () => void;
+    onCancel?: () => void;
+    showPagination?: boolean;
+    showDateControls?: boolean;
+    showSearch?: boolean;
+    showEditingButtons?: boolean;
+    editingButtonsPosition?:
+        | 'top-right'
+        | 'top-left'
+        | 'bottom-right'
+        | 'bottom-left';
+}>();
+
+const emit = defineEmits<{
+    (
+        e: 'update-cell',
+        payload: { rowIndex: number; accessorKey: string; value: unknown },
+    ): void;
 }>();
 
 const dataTableControls = useDataTable({
     data: props.data,
     columns: props.columns,
-    pagination: props.pagination,
+    pagination: props.pagination || {
+        firstPage: 1,
+        currentPage: 1,
+        lastPage: 1,
+        firstPageUrl: null,
+        lastPageUrl: null,
+        perPage: props.data.length,
+        nextPageUrl: null,
+        prevPageUrl: null,
+        total: props.data.length,
+        hasMorePages: false,
+    },
     initialState: {
         startDate: props.startDate,
         endDate: props.endDate,
@@ -95,7 +126,7 @@ const processedColumns = computed(() => {
                 }: {
                     column: Column<TData, TValue>;
                 }) => {
-                    return h(SortableHeader, {
+                    return h(SortableHeader<TData, TValue>, {
                         column: tableColumn,
                         title,
                         sortBy: currentSortBy.value,
@@ -123,10 +154,15 @@ const table = useVueTable({
     manualPagination: true,
     manualSorting: true,
     state: {
-        pagination: {
-            pageIndex: props.pagination.currentPage - 1,
-            pageSize: props.pagination.perPage,
-        },
+        pagination: props.pagination
+            ? {
+                  pageIndex: props.pagination.currentPage - 1,
+                  pageSize: props.pagination.perPage,
+              }
+            : {
+                  pageIndex: 0,
+                  pageSize: props.data.length,
+              },
         sorting:
             currentSortBy.value && currentSortDirection.value
                 ? [
@@ -144,7 +180,10 @@ const table = useVueTable({
     <div class="space-y-4">
         <!-- Top row: Date controls left, Add button right -->
         <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
+            <div
+                v-if="props.showDateControls"
+                class="flex items-center space-x-2"
+            >
                 <DatePicker
                     :max-value="startDateMax"
                     :value="currentStartDate"
@@ -168,6 +207,7 @@ const table = useVueTable({
             </div>
             <div class="flex items-center space-x-2">
                 <Input
+                    v-if="props.showSearch"
                     v-model="currentSearchQuery"
                     class="w-64"
                     placeholder="Search..."
@@ -176,20 +216,64 @@ const table = useVueTable({
                     <Plus class="mr-2 h-4 w-4" />
                     Add
                 </Button>
+                <EditingButtons
+                    v-if="
+                        props.editing &&
+                        props.showEditingButtons &&
+                        props.editingButtonsPosition?.startsWith('top')
+                    "
+                    :on-cancel="props.onCancel"
+                    :on-save="props.onSaveAll"
+                    :position="props.editingButtonsPosition || 'top-right'"
+                />
             </div>
         </div>
 
         <!-- Date presets left, Table info center, Pagination right -->
-        <div class="flex items-center justify-between">
+        <div
+            v-if="props.showPagination || props.showDateControls"
+            class="flex items-center justify-between"
+        >
             <DatePresets
+                v-if="props.showDateControls"
                 :on-last-month="handleLastMonth"
                 :on-last-week="handleLastWeek"
                 :on-last-year="handleLastYear"
                 :on-today="handleToday"
             />
-            <TableInfo :pagination="props.pagination" />
+            <TableInfo
+                v-if="props.showPagination"
+                :pagination="
+                    props.pagination || {
+                        firstPage: 1,
+                        currentPage: 1,
+                        lastPage: 1,
+                        firstPageUrl: null,
+                        lastPageUrl: null,
+                        perPage: props.data.length,
+                        nextPageUrl: null,
+                        prevPageUrl: null,
+                        total: props.data.length,
+                        hasMorePages: false,
+                    }
+                "
+            />
             <TablePagination
-                :pagination="props.pagination"
+                v-if="props.showPagination"
+                :pagination="
+                    props.pagination || {
+                        firstPage: 1,
+                        currentPage: 1,
+                        lastPage: 1,
+                        firstPageUrl: null,
+                        lastPageUrl: null,
+                        perPage: props.data.length,
+                        nextPageUrl: null,
+                        prevPageUrl: null,
+                        total: props.data.length,
+                        hasMorePages: false,
+                    }
+                "
                 :table="table"
                 @page-change="handlePageChange"
                 @page-size-change="handlePageSizeChange"
@@ -202,10 +286,24 @@ const table = useVueTable({
                 <TableHeader :table="table" />
                 <TableBody
                     :columns="props.columns"
+                    :editing="props.editing"
                     :row-click="props.rowClick"
                     :table="table"
+                    @update-cell="emit('update-cell', $event)"
                 />
             </Table>
         </div>
+
+        <!-- Bottom editing buttons -->
+        <EditingButtons
+            v-if="
+                props.editing &&
+                props.showEditingButtons &&
+                props.editingButtonsPosition?.startsWith('bottom')
+            "
+            :on-cancel="props.onCancel"
+            :on-save="props.onSaveAll"
+            :position="props.editingButtonsPosition || 'bottom-right'"
+        />
     </div>
 </template>

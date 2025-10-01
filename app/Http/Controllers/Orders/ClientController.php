@@ -4,36 +4,40 @@ namespace App\Http\Controllers\Orders;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Orders\ClientRequest;
+use App\Http\Requests\Orders\SearchRequest;
 use App\Models\Orders\Client;
+use Illuminate\Http\JsonResponse;
 
 class ClientController extends Controller
 {
-    public function index()
+    public function index() {}
+
+    public function create() {}
+
+    public function store(ClientRequest $request) {}
+
+    public function show(string $id) {}
+
+    public function update(ClientRequest $request, string $id) {}
+
+    public function destroy(string $id) {}
+
+    public function search(SearchRequest $request): JsonResponse
     {
-        return Client::all();
-    }
+        if (! $term = $request->getSearchTerm()) {
+            return response()->json(Client::orderBy('name')->get()->toArray());
+        }
 
-    public function store(ClientRequest $request)
-    {
-        return Client::create($request->validated());
-    }
+        $sanitizedTerm = trim($term);
 
-    public function show(Client $client)
-    {
-        return $client;
-    }
+        $searchPattern = "%$sanitizedTerm%";
 
-    public function update(ClientRequest $request, Client $client)
-    {
-        $client->update($request->validated());
-
-        return $client;
-    }
-
-    public function destroy(Client $client)
-    {
-        $client->delete();
-
-        return response()->json();
+        return response()->json(
+            Client::where('name', 'like', $searchPattern)
+                ->orWhere('contact_email', 'like', $searchPattern)
+                ->orWhere('contact_phone', 'like', $searchPattern)
+                ->orderBy('name')
+                ->get()->toArray()
+        );
     }
 }

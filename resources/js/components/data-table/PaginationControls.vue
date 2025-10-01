@@ -17,11 +17,9 @@ const emit = defineEmits<{
     'page-change': [page: number];
 }>();
 
-// Direct computed properties for pagination state
 const canPreviousPage = computed(() => !!props.pagination.prevPageUrl);
 const canNextPage = computed(() => props.pagination.hasMorePages);
 
-// Direct event handlers
 const handleFirstPage = () => {
     emit('page-change', 1);
 };
@@ -33,7 +31,10 @@ const handlePreviousPage = () => {
 };
 
 const handleNextPage = () => {
-    if (canNextPage.value && props.pagination.currentPage < props.pagination.lastPage) {
+    if (
+        canNextPage.value &&
+        props.pagination.currentPage < props.pagination.lastPage
+    ) {
         emit('page-change', props.pagination.currentPage + 1);
     }
 };

@@ -2,29 +2,29 @@ import type { Column } from '@tanstack/vue-table';
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-vue-next';
 import { type Component } from 'vue';
 
-export interface SortingControls {
+export interface SortingControls<TData = unknown, TValue = unknown> {
     getSortIcon: (
-        column: Column<any, unknown>,
+        column: Column<TData, TValue>,
         sortBy?: string,
         sortDirection?: 'asc' | 'desc',
     ) => Component;
     handleSort: (
-        column: Column<any, unknown>,
+        column: Column<TData, TValue>,
         sortBy?: string,
         sortDirection?: 'asc' | 'desc',
         onSort?: (sortBy: string, sortDirection: 'asc' | 'desc') => void,
     ) => void;
-    isSorted: (column: Column<any, unknown>, sortBy?: string) => boolean;
+    isSorted: (column: Column<TData, TValue>, sortBy?: string) => boolean;
     getSortDirection: (
-        column: Column<any, unknown>,
+        column: Column<TData, TValue>,
         sortBy?: string,
         sortDirection?: 'asc' | 'desc',
     ) => 'asc' | 'desc' | undefined;
 }
 
-export function useSorting(): SortingControls {
+export function useSorting<TData = unknown, TValue = unknown>(): SortingControls<TData, TValue> {
     const getSortIcon = (
-        column: Column<any, unknown>,
+        column: Column<TData, TValue>,
         sortBy?: string,
         sortDirection?: 'asc' | 'desc',
     ) => {
@@ -36,7 +36,7 @@ export function useSorting(): SortingControls {
     };
 
     const handleSort = (
-        column: Column<any, unknown>,
+        column: Column<TData, TValue>,
         sortBy?: string,
         sortDirection?: 'asc' | 'desc',
         onSort?: (sortBy: string, sortDirection: 'asc' | 'desc') => void,
@@ -51,12 +51,12 @@ export function useSorting(): SortingControls {
         }
     };
 
-    const isSorted = (column: Column<any, unknown>, sortBy?: string) => {
+    const isSorted = (column: Column<TData, TValue>, sortBy?: string) => {
         return sortBy === column.id;
     };
 
     const getSortDirection = (
-        column: Column<any, unknown>,
+        column: Column<TData, TValue>,
         sortBy?: string,
         sortDirection?: 'asc' | 'desc',
     ) => {

@@ -14,7 +14,11 @@ withDefaults(defineProps<Props>(), {
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <slot />
-        <BackToTop />
+        <div
+            class="flex h-full flex-1 flex-col gap-4 overflow-auto rounded-xl p-4"
+        >
+            <slot />
+            <BackToTop />
+        </div>
     </AppLayout>
 </template>

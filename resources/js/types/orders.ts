@@ -12,8 +12,8 @@ export type Product = {
 export interface BaseOrder {
     id: number;
     order_number: string;
-    total_amount: number;
-    item_count: number;
+    cost: number;
+    quantity: number;
     created_at: string;
     updated_at: string;
     products: Product[];

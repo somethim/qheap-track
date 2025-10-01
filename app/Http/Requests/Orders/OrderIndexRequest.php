@@ -8,11 +8,6 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class OrderIndexRequest extends FormRequest
 {
-    public function authorize(): bool
-    {
-        return true;
-    }
-
     public function rules(): array
     {
         return [
@@ -23,7 +18,7 @@ class OrderIndexRequest extends FormRequest
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'sort_by' => ['sometimes', 'string'],
             'sort_direction' => ['sometimes', 'string', 'in:asc,desc'],
-            'search' => ['sometimes', 'string', 'max:255'],
+            'search' => ['sometimes', 'string', 'max:255', 'regex:/^[a-zA-Z0-9\s@._-]+$/'],
         ];
     }
 
@@ -75,6 +70,6 @@ class OrderIndexRequest extends FormRequest
 
     public function getSearchTerm(): ?string
     {
-        return $this->query('search', null);
+        return trim($this->query('search')) ?: null;
     }
 }

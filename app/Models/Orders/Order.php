@@ -23,8 +23,8 @@ class Order extends Model
     ];
 
     protected $appends = [
-        'total_amount',
-        'item_count',
+        'cost',
+        'quantity',
     ];
 
     public static function clientOrders(): Builder
@@ -92,32 +92,32 @@ class Order extends Model
     {
         return $query->select('orders.*')
             ->addSelect([
-                'total_amount_calc' => OrderProduct::query()
+                'cost_calc' => OrderProduct::query()
                     ->selectRaw('COALESCE(SUM(quantity * price), 0)')
                     ->whereColumn('order_id', 'orders.id'),
             ])
-            ->orderBy('total_amount_calc', $direction);
+            ->orderBy('cost_calc', $direction);
     }
 
     public function scopeOrderByItemCount(Builder $query, string $direction = 'asc'): Builder
     {
         return $query->select('orders.*')
             ->addSelect([
-                'item_count_calc' => OrderProduct::query()
+                'quantity_calc' => OrderProduct::query()
                     ->selectRaw('COALESCE(SUM(quantity), 0)')
                     ->whereColumn('order_id', 'orders.id'),
             ])
-            ->orderBy('item_count_calc', $direction);
+            ->orderBy('quantity_calc', $direction);
     }
 
-    protected function totalAmount(): Attribute
+    protected function cost(): Attribute
     {
         return Attribute::make(
             get: fn () => $this->orderProducts->sum(fn ($op) => $op->quantity * $op->price)
         );
     }
 
-    protected function itemCount(): Attribute
+    protected function quantity(): Attribute
     {
         return Attribute::make(
             get: fn () => $this->orderProducts->sum('quantity')

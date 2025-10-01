@@ -16,21 +16,24 @@ class OrderController extends Controller
     public function index(OrderIndexRequest $request): Response
     {
         $query = match ($type = $request->getOrderType()) {
-            OrderType::CLIENT->value => Order::clientOrders()->with(['client']),
-            OrderType::SUPPLIER->value => Order::supplierOrders()->with(['supplier']),
+            OrderType::CLIENT->value => Order::clientOrders()->with('client'),
+            OrderType::SUPPLIER->value => Order::supplierOrders()->with('supplier'),
         };
 
         if ($searchTerm = $request->getSearchTerm()) {
-            $query->where(function ($q) use ($searchTerm, $type) {
-                $q->where('order_number', 'like', "%$searchTerm%");
+            $sanitizedTerm = trim($searchTerm);
+            $searchPattern = "%$sanitizedTerm%";
+
+            $query->where(function ($q) use ($searchPattern, $type) {
+                $q->where('order_number', 'like', $searchPattern);
 
                 if ($type === OrderType::CLIENT->value) {
-                    $q->orWhereHas('client', function ($q2) use ($searchTerm) {
-                        $q2->where('name', 'like', "%$searchTerm%");
+                    $q->orWhereHas('client', function ($q2) use ($searchPattern) {
+                        $q2->where('name', 'like', $searchPattern);
                     });
                 } else {
-                    $q->orWhereHas('supplier', function ($q2) use ($searchTerm) {
-                        $q2->where('name', 'like', "%$searchTerm%");
+                    $q->orWhereHas('supplier', function ($q2) use ($searchPattern) {
+                        $q2->where('name', 'like', $searchPattern);
                     });
                 }
             });
@@ -40,11 +43,11 @@ class OrderController extends Controller
         $sortDirection = $request->getSortDirection();
         if ($sortBy && $sortDirection) {
             switch ($sortBy) {
-                case 'total_amount':
+                case 'cost':
                     $query->orderByTotalAmount($sortDirection);
                     break;
 
-                case 'item_count':
+                case 'quantity':
                     $query->orderByItemCount($sortDirection);
                     break;
 
@@ -65,37 +68,34 @@ class OrderController extends Controller
 
         $paginated = $this->paginate($request, $query);
 
-        return Inertia::render('orders/Orders', [
+        return Inertia::render('orders/index', [
             'items' => $paginated['items'],
             'pagination' => $paginated['pagination'],
             'type' => $type,
         ]);
     }
 
+    // todo: handle order product updates
     public function create()
     {
-        return Inertia::render('orders/CreateOrder');
+        return Inertia::render('orders/create');
     }
 
     public function store(OrderRequest $request) {}
 
     public function show(Request $request, string $id)
     {
-        $query = match ($request->query('type', 'client')) {
-            OrderType::CLIENT->value => Order::clientOrders()->with(['client']),
-            OrderType::SUPPLIER->value => Order::supplierOrders()->with(['supplier']),
+        $order = match ($request->query('type', 'client')) {
+            OrderType::CLIENT->value => Order::clientOrders()->with('client'),
+            OrderType::SUPPLIER->value => Order::supplierOrders()->with('supplier'),
         };
 
-        $order = $query->findOrFail($id);
-
-        return Inertia::render('orders/ShowOrder', [
-            'order' => $order,
+        return Inertia::render('orders/show', [
+            'order' => $order->with('products')->findOrFail($id)->makeHidden('orderProducts'),
         ]);
     }
 
-    public function edit($id) {}
+    public function update(OrderRequest $request, string $id) {}
 
-    public function update(Request $request, $id) {}
-
-    public function destroy($id) {}
+    public function destroy(string $id) {}
 }
