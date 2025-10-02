@@ -5,7 +5,7 @@ import {
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
-    useVueTable,
+    useVueTable
 } from '@tanstack/vue-table';
 
 import TablePagination from '@/components/data-table/TablePagination.vue';
@@ -42,10 +42,12 @@ const props = defineProps<{
     editing?: boolean;
     onSaveAll?: () => void;
     onCancel?: () => void;
+    onRemoveRow?: (row: TData, rowIndex: number) => void;
     showPagination?: boolean;
     showDateControls?: boolean;
     showSearch?: boolean;
     showEditingButtons?: boolean;
+    showRemoveButton?: boolean;
     editingButtonsPosition?:
         | 'top-right'
         | 'top-left'
@@ -58,6 +60,7 @@ const emit = defineEmits<{
         e: 'update-cell',
         payload: { rowIndex: number; accessorKey: string; value: unknown },
     ): void;
+    (e: 'remove-row', row: TData, rowIndex: number): void;
 }>();
 
 const dataTableControls = useDataTable({
@@ -285,11 +288,16 @@ const table = useVueTable({
             <Table>
                 <TableHeader :table="table" />
                 <TableBody
+                    :add-item="props.addItem"
                     :columns="props.columns"
                     :editing="props.editing"
                     :row-click="props.rowClick"
+                    :show-remove-button="props.showRemoveButton"
                     :table="table"
                     @update-cell="emit('update-cell', $event)"
+                    @remove-row="
+                        emit('remove-row', $event.row, $event.rowIndex)
+                    "
                 />
             </Table>
         </div>

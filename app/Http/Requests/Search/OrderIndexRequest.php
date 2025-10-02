@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Orders;
+namespace App\Http\Requests\Search;
 
 use App\Enums\OrderType;
 use Carbon\Carbon;

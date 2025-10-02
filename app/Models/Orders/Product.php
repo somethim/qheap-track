@@ -2,9 +2,11 @@
 
 namespace App\Models\Orders;
 
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
@@ -12,16 +14,37 @@ class Product extends Model
 
     protected $fillable = [
         'name',
-        'description',
         'sku',
         'price',
-        'stock_quantity',
+        'stock',
+        'user_id',
+    ];
+
+    protected $hidden = [
+        'user_id',
     ];
 
     protected static function booted(): void
     {
-        static::creating(function (Product $product) {
-            $product->sku = Str::upper(Str::random(3)).'-'.Str::random(8);
+        static::addGlobalScope('user', function (Builder $builder) {
+            if (auth()->check()) {
+                $builder->where('user_id', auth()->id());
+            }
         });
+    }
+
+    public function scopeForUser(Product $product, int $userId): Builder
+    {
+        return $product->withoutGlobalScope('user')->where('user_id', $userId);
+    }
+
+    public function scopeAllUsers(Product $product): Builder
+    {
+        return $product->withoutGlobalScope('user');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

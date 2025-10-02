@@ -2,13 +2,13 @@
 
 namespace App\Models\Orders;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 
@@ -20,11 +20,16 @@ class Order extends Model
         'client_id',
         'supplier_id',
         'order_number',
+        'user_id',
+    ];
+
+    protected $hidden = [
+        'user_id',
     ];
 
     protected $appends = [
         'cost',
-        'quantity',
+        'stock',
     ];
 
     public static function clientOrders(): Builder
@@ -39,6 +44,12 @@ class Order extends Model
 
     protected static function booted(): void
     {
+        static::addGlobalScope('user', function (Builder $builder) {
+            if (auth()->check()) {
+                $builder->where('user_id', auth()->id());
+            }
+        });
+
         static::creating(static function (Order $order) {
             if ($order->isDirty('client_id') && $order->isDirty('supplier_id')) {
                 dump($order->client_id, $order->supplier_id);
@@ -61,6 +72,21 @@ class Order extends Model
         });
     }
 
+    public function scopeForUser(Order $order, int $userId): Builder
+    {
+        return $order->withoutGlobalScope('user')->where('user_id', $userId);
+    }
+
+    public function scopeAllUsers(Order $query): Builder
+    {
+        return $query->withoutGlobalScope('user');
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function client(): BelongsTo
     {
         return $this->belongsTo(Client::class);
@@ -76,24 +102,12 @@ class Order extends Model
         return $this->hasMany(OrderProduct::class);
     }
 
-    public function products(): HasManyThrough
-    {
-        return $this->hasManyThrough(
-            Product::class,
-            OrderProduct::class,
-            'order_id',
-            'id',
-            'id',
-            'product_id'
-        );
-    }
-
     public function scopeOrderByTotalAmount(Builder $query, string $direction = 'asc'): Builder
     {
         return $query->select('orders.*')
             ->addSelect([
                 'cost_calc' => OrderProduct::query()
-                    ->selectRaw('COALESCE(SUM(quantity * price), 0)')
+                    ->selectRaw('COALESCE(SUM(stock * price), 0)')
                     ->whereColumn('order_id', 'orders.id'),
             ])
             ->orderBy('cost_calc', $direction);
@@ -103,24 +117,24 @@ class Order extends Model
     {
         return $query->select('orders.*')
             ->addSelect([
-                'quantity_calc' => OrderProduct::query()
-                    ->selectRaw('COALESCE(SUM(quantity), 0)')
+                'stock_calc' => OrderProduct::query()
+                    ->selectRaw('COALESCE(SUM(stock), 0)')
                     ->whereColumn('order_id', 'orders.id'),
             ])
-            ->orderBy('quantity_calc', $direction);
+            ->orderBy('stock_calc', $direction);
     }
 
     protected function cost(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->orderProducts->sum(fn ($op) => $op->quantity * $op->price)
+            get: fn () => $this->orderProducts->sum(fn ($op) => $op->stock * $op->price)
         );
     }
 
-    protected function quantity(): Attribute
+    protected function stock(): Attribute
     {
         return Attribute::make(
-            get: fn () => $this->orderProducts->sum('quantity')
+            get: fn () => $this->orderProducts->sum('stock')
         );
     }
 }

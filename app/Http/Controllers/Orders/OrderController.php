@@ -4,10 +4,9 @@ namespace App\Http\Controllers\Orders;
 
 use App\Enums\OrderType;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Orders\OrderIndexRequest;
 use App\Http\Requests\Orders\OrderRequest;
+use App\Http\Requests\Search\OrderIndexRequest;
 use App\Models\Orders\Order;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -47,7 +46,7 @@ class OrderController extends Controller
                     $query->orderByTotalAmount($sortDirection);
                     break;
 
-                case 'quantity':
+                case 'stock':
                     $query->orderByItemCount($sortDirection);
                     break;
 
@@ -75,7 +74,6 @@ class OrderController extends Controller
         ]);
     }
 
-    // todo: handle order product updates
     public function create()
     {
         return Inertia::render('orders/create');
@@ -83,15 +81,10 @@ class OrderController extends Controller
 
     public function store(OrderRequest $request) {}
 
-    public function show(Request $request, string $id)
+    public function show(string $id)
     {
-        $order = match ($request->query('type', 'client')) {
-            OrderType::CLIENT->value => Order::clientOrders()->with('client'),
-            OrderType::SUPPLIER->value => Order::supplierOrders()->with('supplier'),
-        };
-
         return Inertia::render('orders/show', [
-            'order' => $order->with('products')->findOrFail($id)->makeHidden('orderProducts'),
+            'order' => Order::with(['orderProducts.product', 'client', 'supplier'])->findOrFail($id),
         ]);
     }
 

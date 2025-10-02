@@ -2,6 +2,7 @@
 
 namespace App\Models\Orders;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,9 +14,20 @@ class OrderProduct extends Model
     protected $fillable = [
         'order_id',
         'product_id',
-        'quantity',
+        'stock',
         'price',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope('user', function (Builder $builder) {
+            if (auth()->check()) {
+                $builder->whereHas('order', function ($order) {
+                    $order->where('user_id', auth()->id());
+                });
+            }
+        });
+    }
 
     public function order(): BelongsTo
     {

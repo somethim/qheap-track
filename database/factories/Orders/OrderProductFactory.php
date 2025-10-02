@@ -16,7 +16,7 @@ class OrderProductFactory extends Factory
         return [
             'order_id' => Order::factory()->create()->id,
             'product_id' => Product::factory()->create()->id,
-            'quantity' => $this->faker->numberBetween(1, 100),
+            'stock' => $this->faker->numberBetween(1, 100),
             'price' => $this->faker->randomFloat(2, 1, 1000),
         ];
     }

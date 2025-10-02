@@ -1,8 +1,10 @@
 <script generic="TData, TValue" lang="ts" setup>
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { TableBody, TableCell, TableRow } from '@/components/ui/table';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { FlexRender, type Table } from '@tanstack/vue-table';
+import { Trash2 } from 'lucide-vue-next';
 
 type EditableData = Record<string, unknown>;
 
@@ -11,6 +13,8 @@ const props = defineProps<{
     columns: ColumnDef<TData, TValue>[];
     rowClick?: (row: TData) => void;
     editing?: boolean;
+    addItem?: () => void;
+    showRemoveButton?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -18,6 +22,7 @@ const emit = defineEmits<{
         e: 'update-cell',
         payload: { rowIndex: number; accessorKey: string; value: unknown },
     ): void;
+    (e: 'remove-row', payload: { row: TData; rowIndex: number }): void;
 }>();
 
 const getColumnDef = (columnDef: ColumnDef<TData, TValue>) => {
@@ -42,6 +47,27 @@ const getRowValue = (row: TData, accessorKey: string): string | number => {
 
     return value != null ? String(value) : '';
 };
+
+const handleKeyDown = (
+    event: KeyboardEvent,
+    rowIndex: number,
+    cellIndex: number,
+) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        props.addItem?.();
+    } else if (event.key === 'Tab') {
+        const totalRows = props.table.getRowModel().rows.length;
+        const totalCells = props.columns.length;
+        const isLastRow = rowIndex === totalRows - 1;
+        const isLastCell = cellIndex === totalCells - 1;
+
+        if (isLastRow && isLastCell) {
+            event.preventDefault();
+            props.addItem?.();
+        }
+    }
+};
 </script>
 
 <template>
@@ -58,11 +84,15 @@ const getRowValue = (row: TData, accessorKey: string): string | number => {
                 :data-state="row.getIsSelected() ? 'selected' : undefined"
                 @click="!props.editing && props.rowClick?.(row.original)"
             >
-                <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+                <TableCell
+                    v-for="(cell, cellIndex) in row.getVisibleCells()"
+                    :key="cell.id"
+                >
                     <template
                         v-if="
                             props.editing &&
-                            getColumnDef(cell.column.columnDef).accessorKey
+                            getColumnDef(cell.column.columnDef).accessorKey &&
+                            !cell.column.columnDef.cell
                         "
                     >
                         <Input
@@ -82,6 +112,10 @@ const getRowValue = (row: TData, accessorKey: string): string | number => {
                             :type="
                                 getColumnDef(cell.column.columnDef).meta
                                     ?.inputType || 'text'
+                            "
+                            @keydown="
+                                (event: KeyboardEvent) =>
+                                    handleKeyDown(event, row.index, cellIndex)
                             "
                             @update:model-value="
                                 (val: string | number) => {
@@ -103,12 +137,29 @@ const getRowValue = (row: TData, accessorKey: string): string | number => {
                         />
                     </template>
                 </TableCell>
+                <TableCell v-if="props.showRemoveButton" class="w-12">
+                    <Button
+                        class="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        size="sm"
+                        variant="ghost"
+                        @click.stop="
+                            emit('remove-row', {
+                                row: row.original,
+                                rowIndex: row.index,
+                            })
+                        "
+                    >
+                        <Trash2 class="h-4 w-4" />
+                    </Button>
+                </TableCell>
             </TableRow>
         </template>
         <template v-else>
             <TableRow>
                 <TableCell
-                    :colspan="props.columns.length"
+                    :colspan="
+                        props.columns.length + (props.showRemoveButton ? 1 : 0)
+                    "
                     class="h-24 text-center"
                 >
                     No results.

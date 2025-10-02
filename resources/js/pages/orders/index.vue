@@ -89,12 +89,12 @@ const columns: ColumnDef<Order>[] = [
         },
     },
     {
-        id: 'quantity',
-        accessorKey: 'quantity',
+        id: 'stock',
+        accessorKey: 'stock',
         enableSorting: true,
-        header: 'Quantity',
+        header: 'stock',
         cell: ({ row }) => {
-            return h('span', row.original.quantity);
+            return h('span', row.original.stock);
         },
     },
     {

@@ -1,22 +1,30 @@
 export type Product = {
     id: number;
     name: string;
-    description: string | null;
     sku: string;
     price: number;
-    stock_quantity: number;
+    stock: number;
     created_at: string;
     updated_at: string;
+};
+
+export type OrderProduct = {
+    id: number;
+    order_id: number;
+    product_id: number;
+    stock: number;
+    price: number;
+    product: Product;
 };
 
 export interface BaseOrder {
     id: number;
     order_number: string;
     cost: number;
-    quantity: number;
+    stock: number;
     created_at: string;
     updated_at: string;
-    products: Product[];
+    order_products: OrderProduct[];
 }
 
 export type Client = {

@@ -14,11 +14,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('orders', OrderController::class);
 
+    Route::post('products/search', [ProductController::class, 'search'])->name('products.search');
     Route::resource('products', ProductController::class);
 
-    Route::get('clients/search', [ClientController::class, 'search'])->name('clients.search');
+    Route::post('clients/search', [ClientController::class, 'search'])->name('clients.search');
     Route::resource('clients', ClientController::class);
 
+    Route::post('suppliers/search', [SupplierController::class, 'search'])->name('suppliers.search');
     Route::resource('suppliers', SupplierController::class);
 });
 

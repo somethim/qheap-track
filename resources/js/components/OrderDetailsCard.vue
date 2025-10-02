@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import SearchSelector from '@/components/SearchSelector.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     FormControl,
@@ -7,8 +8,9 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form';
+import { search as clientSearch } from '@/routes/clients';
+import { search as supplierSearch } from '@/routes/suppliers';
 import { Order } from '@/types/orders';
-import ClientSelector from './ClientSelector.vue';
 
 const { order } = defineProps<{
     order: Order;
@@ -19,7 +21,7 @@ const emit = defineEmits<{
 }>();
 
 const formatSearchPlaceholder = () => {
-    if (order.client_id) {
+    if (order.client_id && order.client) {
         return (
             order.client.name ??
             order.client.contact_email ??
@@ -28,7 +30,7 @@ const formatSearchPlaceholder = () => {
         );
     }
 
-    if (order.supplier_id) {
+    if (order.supplier_id && order.supplier) {
         return (
             order.supplier.name ??
             order.supplier.contact_email ??
@@ -44,8 +46,26 @@ const getCurrentClientId = () => {
     return order.client_id ? order.client_id : order.supplier_id;
 };
 
-const updateClientId = (value: number | null) => {
-    emit('update:client-id', value);
+const isClientOrder = () => {
+    return Boolean(order.client_id);
+};
+
+const getSearchUrl = () => {
+    return isClientOrder() ? clientSearch().url : supplierSearch().url;
+};
+
+const getSearchPlaceholder = () => {
+    return isClientOrder()
+        ? 'Search for a client...'
+        : 'Search for a supplier...';
+};
+
+const getNoResultsText = () => {
+    return isClientOrder() ? 'No clients found' : 'No suppliers found';
+};
+
+const updateClientId = (value: string | number | null) => {
+    emit('update:client-id', value as number | null);
 };
 </script>
 
@@ -65,16 +85,30 @@ const updateClientId = (value: number | null) => {
                     </p>
                 </div>
 
-                <FormField v-slot="{ componentField }" name="client_id">
+                <FormField
+                    :name="isClientOrder() ? 'client_id' : 'supplier_id'"
+                >
                     <FormItem>
                         <FormLabel>
-                            {{ order.client_id ? 'Client' : 'Supplier' }}
+                            {{ isClientOrder() ? 'Client' : 'Supplier' }}
                         </FormLabel>
                         <FormControl>
-                            <ClientSelector
-                                :defaultValue="formatSearchPlaceholder()"
+                            <SearchSelector
+                                :default-value="formatSearchPlaceholder()"
+                                :display-field="'name'"
+                                :id-field="'id'"
                                 :model-value="getCurrentClientId()"
-                                :name="componentField.name"
+                                :no-results-text="getNoResultsText()"
+                                :placeholder="getSearchPlaceholder()"
+                                :response-key="
+                                    isClientOrder() ? 'clients' : 'suppliers'
+                                "
+                                :search-param="'term'"
+                                :secondary-fields="[
+                                    'contact_email',
+                                    'contact_phone',
+                                ]"
+                                :url="getSearchUrl()"
                                 @update:model-value="updateClientId"
                             />
                         </FormControl>
@@ -95,7 +129,7 @@ const updateClientId = (value: number | null) => {
                     <p class="text-sm font-medium text-muted-foreground">
                         Item Count
                     </p>
-                    <p class="text-base">{{ order.quantity }}</p>
+                    <p class="text-base">{{ order.stock }}</p>
                 </div>
             </div>
         </CardContent>

@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Orders;
 
+use App\Models\Orders\Client;
+use App\Rules\UniqueForUser;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ClientRequest extends FormRequest
@@ -9,7 +11,12 @@ class ClientRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                new UniqueForUser(Client::class),
+            ],
             'description' => ['nullable', 'string', 'max:1000'],
             'contact_email' => ['nullable', 'email', 'max:50'],
             'contact_phone' => ['nullable', 'string', 'max:20'],

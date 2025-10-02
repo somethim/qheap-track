@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Orders;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Orders\ClientRequest;
-use App\Http\Requests\Orders\SearchRequest;
+use App\Http\Requests\Search\ClientAndSupplierSearchRequest;
 use App\Models\Orders\Client;
 use Illuminate\Http\JsonResponse;
 
@@ -22,22 +22,21 @@ class ClientController extends Controller
 
     public function destroy(string $id) {}
 
-    public function search(SearchRequest $request): JsonResponse
+    public function search(ClientAndSupplierSearchRequest $request): JsonResponse
     {
-        if (! $term = $request->getSearchTerm()) {
-            return response()->json(Client::orderBy('name')->get()->toArray());
+        $query = Client::query();
+
+        if ($term = $request->getSearchTerm()) {
+            $sanitizedTerm = "%$term%";
+            $query->where(function ($q) use ($sanitizedTerm) {
+                $q->where('name', 'like', $sanitizedTerm)
+                    ->orWhere('contact_email', 'like', $sanitizedTerm)
+                    ->orWhere('contact_phone', 'like', $sanitizedTerm);
+            });
         }
 
-        $sanitizedTerm = trim($term);
-
-        $searchPattern = "%$sanitizedTerm%";
-
-        return response()->json(
-            Client::where('name', 'like', $searchPattern)
-                ->orWhere('contact_email', 'like', $searchPattern)
-                ->orWhere('contact_phone', 'like', $searchPattern)
-                ->orderBy('name')
-                ->get()->toArray()
-        );
+        return response()->json([
+            'clients' => $query->orderBy('name')->get()->toArray(),
+        ]);
     }
 }
