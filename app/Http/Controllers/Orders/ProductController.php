@@ -25,15 +25,11 @@ class ProductController extends Controller
     public function search(ProductSearchRequest $request): JsonResponse
     {
         if ($name = $request->getName()) {
-            $sanitizedName = "%$name%";
-
-            return response()->json(['products' => Product::where('name', 'like', $sanitizedName)->orderBy('name')->get()->toArray()]);
+            return response()->json(['products' => Product::where('name', 'like', "%$name%")->orderBy('name')->get()->toArray()]);
         }
 
-        if ($sku = "%{$request->getSku()}%") {
-            $sanitizedSku = "%$sku%";
-
-            return response()->json(['products' => Product::where('sku', 'like', $sanitizedSku)->orderBy('name')->get()->toArray()]);
+        if ($sku = $request->getSku()) {
+            return response()->json(['products' => Product::where('sku', 'like', "%$sku%")->orderBy('name')->get()->toArray()]);
         }
 
         return response()->json(['products' => Product::orderBy('name')->get()->toArray()]);

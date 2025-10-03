@@ -1,1 +1,10 @@
 export { default as DataTable } from './DataTable.vue';
+export { default as DatePicker } from './DatePicker.vue';
+export { default as DatePresets } from './DatePresets.vue';
+export { default as PageSizeSelector } from './PageSizeSelector.vue';
+export { default as PaginationControls } from './PaginationControls.vue';
+export { default as SortableHeader } from './SortableHeader.vue';
+export { default as TableBody } from './TableBody.vue';
+export { default as TableHeader } from './TableHeader.vue';
+export { default as TableInfo } from './TableInfo.vue';
+export { default as TablePagination } from './TablePagination.vue';

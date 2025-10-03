@@ -1,22 +1,20 @@
 <script lang="ts" setup>
 import ContactInfoCard from '@/components/ContactInfoCard.vue';
-import { DataTable } from '@/components/data-table';
+import { ExcelTable } from '@/components/excel-table';
 import OrderDetailsCard from '@/components/OrderDetailsCard.vue';
-import SearchSelector from '@/components/SearchSelector.vue';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { search as productSearch } from '@/routes/products';
 import { isClientOrder, Order } from '@/types/orders';
 import { Head, useForm } from '@inertiajs/vue3';
 import type { ColumnDef } from '@tanstack/vue-table';
-import { h } from 'vue';
+import { ref } from 'vue';
 
-type ProductRow = (typeof productsForm.products)[number];
-
-interface UpdateCellPayload {
-    rowIndex: number;
-    accessorKey: string;
-    value: unknown;
+interface ProductItem {
+    id: number;
+    name: string;
+    sku: string;
+    price: string;
+    stock: string;
 }
 
 const { order } = defineProps<{ order: Order }>();
@@ -46,143 +44,58 @@ const orderForm = useForm({
     supplier_id: !isClient ? order.supplier_id : null,
 });
 
-const productsForm = useForm({
-    products: order.order_products.map((order_product) => ({
+// const productsForm = useForm({
+//     products: order.order_products.map((order_product) => ({
+//         id: order_product.product.id,
+//         name: order_product.product.name,
+//         sku: order_product.product.sku,
+//         price: order_product.price?.toString() || '0',
+//         stock: order_product.stock?.toString() || '0',
+//     })),
+// });
+
+// const saveAll = () => {
+//     const combinedForm = {
+//         contact: contactForm.data(),
+//         order: orderForm.data(),
+//         products: productsForm.data(),
+//     };
+//     console.log(combinedForm);
+// };
+
+// const resetAll = () => {
+//     contactForm.reset();
+//     orderForm.reset();
+//     productsForm.reset();
+// };
+
+// Products table setup
+const productsData = ref<ProductItem[]>(
+    order.order_products.map((order_product) => ({
         id: order_product.product.id,
         name: order_product.product.name,
         sku: order_product.product.sku,
         price: order_product.price?.toString() || '0',
         stock: order_product.stock?.toString() || '0',
     })),
-});
+);
 
-const saveAll = () => {
-    const combinedForm = {
-        contact: contactForm.data(),
-        order: orderForm.data(),
-        products: productsForm.data(),
-    };
-    console.log(combinedForm);
-};
-
-const resetAll = () => {
-    contactForm.reset();
-    orderForm.reset();
-    productsForm.reset();
-};
-
-const handleProductUpdate = (payload: UpdateCellPayload) => {
-    const products = productsForm.products;
-    if (payload.rowIndex < 0 || payload.rowIndex >= products.length) return;
-    const product = products[payload.rowIndex];
-    if (!product || !(payload.accessorKey in product)) return;
-    (product as Record<string, unknown>)[payload.accessorKey] = payload.value;
-};
-
-const addNewProduct = () => {
-    productsForm.products = [
-        ...productsForm.products,
-        {
-            id: 0,
-            name: '',
-            sku: '',
-            price: '0',
-            stock: '0',
-        },
-    ];
-};
-
-const handleRemoveProduct = (row: ProductRow, rowIndex: number) => {
-    const filteredProducts = productsForm.products.filter(
-        (_, index) => index !== rowIndex,
-    );
-
-    if (filteredProducts.length === 0) {
-        filteredProducts.push({
-            id: 0,
-            name: '',
-            sku: '',
-            price: '0',
-            stock: '0',
-        });
-    }
-
-    productsForm.products = filteredProducts;
-};
-
-const handleProductSelection = (
-    rowIndex: number,
-    productId: number | string | null,
-) => {
-    const products = productsForm.products;
-    if (rowIndex < 0 || rowIndex >= products.length || !productId) return;
-
-    products[rowIndex] = {
-        ...products[rowIndex],
-        id: Number(productId),
-    };
-};
-
-const productColumns: ColumnDef<ProductRow>[] = [
-    {
-        accessorKey: 'sku',
-        header: 'SKU',
-        cell: ({ row }) => {
-            const rowIndex = productsForm.products.findIndex(
-                (p) => p.id === row.original.id,
-            );
-            return h(SearchSelector, {
-                modelValue: row.original.id,
-                defaultValue: row.original.sku,
-                url: productSearch().url,
-                displayField: 'sku',
-                idField: 'id',
-                secondaryFields: ['name'],
-                placeholder: 'Search by SKU...',
-                noResultsText: 'No products found',
-                responseKey: 'products',
-                searchParam: 'sku',
-                'onUpdate:modelValue': (value: number | string | null) => {
-                    handleProductSelection(rowIndex, value);
-                },
-            });
-        },
-    },
+const columns: ColumnDef<ProductItem>[] = [
     {
         accessorKey: 'name',
         header: 'Product Name',
-        cell: ({ row }) => {
-            const rowIndex = productsForm.products.findIndex(
-                (p) => p.id === row.original.id,
-            );
-            return h(SearchSelector, {
-                modelValue: row.original.id,
-                defaultValue: row.original.name,
-                url: productSearch().url,
-                displayField: 'name',
-                idField: 'id',
-                secondaryFields: ['sku'],
-                placeholder: 'Search by name...',
-                noResultsText: 'No products found',
-                responseKey: 'products',
-                searchParam: 'name',
-                'onUpdate:modelValue': (value: number | string | null) => {
-                    handleProductSelection(rowIndex, value);
-                },
-            });
-        },
+    },
+    {
+        accessorKey: 'sku',
+        header: 'SKU',
     },
     {
         accessorKey: 'price',
         header: 'Price',
-        meta: { inputType: 'number' },
-        cell: ({ row }) => `$${Number(row.original.price).toFixed(2)}`,
     },
     {
         accessorKey: 'stock',
         header: 'Stock',
-        meta: { inputType: 'number' },
-        cell: ({ row }) => row.original.stock,
     },
 ];
 </script>
@@ -215,21 +128,10 @@ const productColumns: ColumnDef<ProductRow>[] = [
                     <CardTitle>Products</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <DataTable
-                        :add-item="addNewProduct"
-                        :columns="productColumns"
-                        :data="productsForm.products"
-                        :editing="true"
-                        :editing-buttons-position="'bottom-right'"
-                        :on-cancel="resetAll"
-                        :on-save-all="saveAll"
-                        :show-date-controls="false"
-                        :show-editing-buttons="true"
-                        :show-pagination="false"
-                        :show-remove-button="true"
-                        :show-search="false"
-                        @update-cell="handleProductUpdate"
-                        @remove-row="handleRemoveProduct"
+                    <ExcelTable
+                        :columns="columns"
+                        :data="productsData"
+                        @update:data="(newData) => (productsData = newData)"
                     />
                 </CardContent>
             </Card>

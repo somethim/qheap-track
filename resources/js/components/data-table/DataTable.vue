@@ -5,10 +5,18 @@ import {
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
-    useVueTable
+    useVueTable,
 } from '@tanstack/vue-table';
 
-import TablePagination from '@/components/data-table/TablePagination.vue';
+import {
+    DatePresets,
+    SortableHeader,
+    TableBody,
+    TableHeader,
+    TableInfo,
+    TablePagination,
+} from '@/components/data-table';
+import DatePicker from '@/components/data-table/DatePicker.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table } from '@/components/ui/table';
@@ -17,13 +25,6 @@ import { Pagination } from '@/types';
 import type { QueryParams } from '@/wayfinder';
 import { Plus } from 'lucide-vue-next';
 import { computed, h } from 'vue';
-import DatePicker from './DatePicker.vue';
-import DatePresets from './DatePresets.vue';
-import EditingButtons from './EditingButtons.vue';
-import SortableHeader from './SortableHeader.vue';
-import TableBody from './TableBody.vue';
-import TableHeader from './TableHeader.vue';
-import TableInfo from './TableInfo.vue';
 
 const props = defineProps<{
     columns: ColumnDef<TData, TValue>[];
@@ -39,28 +40,9 @@ const props = defineProps<{
     search?: (query: string) => void;
     onSort?: (sortBy: string, sortDirection: 'asc' | 'desc') => void;
     onNavigate?: (query: QueryParams) => void;
-    editing?: boolean;
-    onSaveAll?: () => void;
-    onCancel?: () => void;
-    onRemoveRow?: (row: TData, rowIndex: number) => void;
     showPagination?: boolean;
     showDateControls?: boolean;
     showSearch?: boolean;
-    showEditingButtons?: boolean;
-    showRemoveButton?: boolean;
-    editingButtonsPosition?:
-        | 'top-right'
-        | 'top-left'
-        | 'bottom-right'
-        | 'bottom-left';
-}>();
-
-const emit = defineEmits<{
-    (
-        e: 'update-cell',
-        payload: { rowIndex: number; accessorKey: string; value: unknown },
-    ): void;
-    (e: 'remove-row', row: TData, rowIndex: number): void;
 }>();
 
 const dataTableControls = useDataTable({
@@ -219,16 +201,6 @@ const table = useVueTable({
                     <Plus class="mr-2 h-4 w-4" />
                     Add
                 </Button>
-                <EditingButtons
-                    v-if="
-                        props.editing &&
-                        props.showEditingButtons &&
-                        props.editingButtonsPosition?.startsWith('top')
-                    "
-                    :on-cancel="props.onCancel"
-                    :on-save="props.onSaveAll"
-                    :position="props.editingButtonsPosition || 'top-right'"
-                />
             </div>
         </div>
 
@@ -290,28 +262,10 @@ const table = useVueTable({
                 <TableBody
                     :add-item="props.addItem"
                     :columns="props.columns"
-                    :editing="props.editing"
                     :row-click="props.rowClick"
-                    :show-remove-button="props.showRemoveButton"
                     :table="table"
-                    @update-cell="emit('update-cell', $event)"
-                    @remove-row="
-                        emit('remove-row', $event.row, $event.rowIndex)
-                    "
                 />
             </Table>
         </div>
-
-        <!-- Bottom editing buttons -->
-        <EditingButtons
-            v-if="
-                props.editing &&
-                props.showEditingButtons &&
-                props.editingButtonsPosition?.startsWith('bottom')
-            "
-            :on-cancel="props.onCancel"
-            :on-save="props.onSaveAll"
-            :position="props.editingButtonsPosition || 'bottom-right'"
-        />
     </div>
 </template>
