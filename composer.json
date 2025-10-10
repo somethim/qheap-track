@@ -13,6 +13,7 @@
         "giggsey/libphonenumber-for-php": "^9.0",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
+        "laravel/octane": "^2.12",
         "laravel/tinker": "^2.10.1",
         "laravel/wayfinder": "^0.1.9",
         "tightenco/ziggy": "^2.6"
@@ -32,11 +33,6 @@
             "App\\": "app/",
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
-        }
-    },
-    "autoload-dev": {
-        "psr-4": {
-            "Tests\\": "tests/"
         }
     },
     "scripts": {

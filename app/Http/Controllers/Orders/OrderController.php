@@ -144,14 +144,26 @@ class OrderController extends Controller
 
     public function create()
     {
-        return Inertia::render('orders/create');
+        $type = request()->query('type', 'client');
+
+        return Inertia::render('orders/create', [
+            'type' => $type,
+        ]);
     }
 
-    public function show(Order $order)
+    private function updateContactInfo(OrderRequest $request, Order $order): void
     {
-        return Inertia::render('orders/show', [
-            'order' => $order->load(['orderProducts.product', 'client', 'supplier']),
-        ]);
+        if (! $request->has('contact_info')) {
+            return;
+        }
+
+        $contactInfo = $request->validated('contact_info');
+
+        if ($order->client_id) {
+            $order->client->update($contactInfo);
+        } elseif ($order->supplier_id) {
+            $order->supplier->update($contactInfo);
+        }
     }
 
     public function update(OrderRequest $request, Order $order)
@@ -170,40 +182,6 @@ class OrderController extends Controller
                 ->back()
                 ->with('error', 'An error occurred while updating the order: '.$e->getMessage())
                 ->withInput();
-        }
-    }
-
-    public function destroy(Order $order)
-    {
-        try {
-            $type = $order->isClientOrder() ? OrderType::CLIENT->value : OrderType::SUPPLIER->value;
-
-            DB::transaction(function () use ($order) {
-                $orderProducts = $order->orderProducts()->get();
-                $multiplier = $order->isClientOrder() ? -1 : 1;
-
-                $stockChanges = $orderProducts->groupBy('product_id')->map(function ($items) {
-                    return $items->sum('stock');
-                });
-
-                $products = Product::whereIn('id', $stockChanges->keys())->get();
-                foreach ($products as $product) {
-                    $product->stock -= $stockChanges[$product->id] * $multiplier;
-                    $product->save();
-                }
-
-                $order->orderProducts()->delete();
-
-                $order->delete();
-            });
-
-            return redirect()
-                ->route('orders.index', ['type' => $type])
-                ->with('success', 'Order deleted successfully.');
-        } catch (Throwable $e) {
-            return redirect()
-                ->back()
-                ->with('error', 'An error occurred while deleting the order: '.$e->getMessage());
         }
     }
 
@@ -250,18 +228,82 @@ class OrderController extends Controller
         }
     }
 
-    private function updateContactInfo(OrderRequest $request, Order $order): void
+    public function show(Order $order)
     {
-        if (! $request->has('contact_info')) {
-            return;
-        }
+        return Inertia::render('orders/show', [
+            'order' => $order->load(['orderProducts.product', 'client', 'supplier']),
+        ]);
+    }
 
-        $contactInfo = $request->validated('contact_info');
+    public function destroy(Order $order)
+    {
+        try {
+            $type = $order->isClientOrder() ? OrderType::CLIENT->value : OrderType::SUPPLIER->value;
 
-        if ($order->client_id) {
-            $order->client->update($contactInfo);
-        } elseif ($order->supplier_id) {
-            $order->supplier->update($contactInfo);
+            DB::transaction(function () use ($order) {
+                $orderProducts = $order->orderProducts()->get();
+                $multiplier = $order->isClientOrder() ? -1 : 1;
+
+                $stockChanges = $orderProducts->groupBy('product_id')->map(function ($items) {
+                    return $items->sum('stock');
+                });
+
+                $products = Product::whereIn('id', $stockChanges->keys())->get();
+                foreach ($products as $product) {
+                    $product->stock -= $stockChanges[$product->id] * $multiplier;
+                    $product->save();
+                }
+
+                $order->orderProducts()->delete();
+
+                $order->delete();
+            });
+
+            return redirect()
+                ->route('orders.index', ['type' => $type])
+                ->with('success', 'Order deleted successfully.');
+        } catch (Throwable $e) {
+            return redirect()
+                ->back()
+                ->with('error', 'An error occurred while deleting the order: '.$e->getMessage());
         }
+    }
+
+    public function printPreview(Order $order)
+    {
+        $order->load(['orderProducts.product', 'client', 'supplier']);
+
+        $orderData = $order->toArray();
+        $orderData['formatted_total'] = Currency::formatCurrency($order->cost);
+        $orderData['order_products'] = $order->orderProducts->map(function ($orderProduct) {
+            return [
+                'product_name' => $orderProduct->product->name,
+                'product_sku' => $orderProduct->product->sku,
+                'quantity' => $orderProduct->stock,
+                'price' => Currency::formatCurrency($orderProduct->price),
+                'subtotal' => Currency::formatCurrency($orderProduct->price * $orderProduct->stock),
+            ];
+        })->toArray();
+
+        return response()->json($orderData);
+    }
+
+    public function print(Order $order)
+    {
+        $order->load(['orderProducts.product', 'client', 'supplier']);
+
+        return view('orders.print', [
+            'order' => $order,
+            'total' => Currency::formatCurrency($order->cost),
+            'orderProducts' => $order->orderProducts->map(function ($orderProduct) {
+                return [
+                    'product_name' => $orderProduct->product->name,
+                    'product_sku' => $orderProduct->product->sku,
+                    'quantity' => $orderProduct->stock,
+                    'price' => Currency::formatCurrency($orderProduct->price),
+                    'subtotal' => Currency::formatCurrency($orderProduct->price * $orderProduct->stock),
+                ];
+            }),
+        ]);
     }
 }

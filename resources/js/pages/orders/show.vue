@@ -12,8 +12,9 @@ import products from '@/routes/products/index';
 import { Client, isClientOrder, Order, Supplier } from '@/types/orders';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import type { ColumnDef } from '@tanstack/vue-table';
-import { Trash2 } from 'lucide-vue-next';
+import { Eye, Printer, Trash2 } from 'lucide-vue-next';
 import { computed, h, nextTick, ref, watch } from 'vue';
+import { useToast } from '@/composables/useToast';
 
 interface ProductItem {
     id: number;
@@ -41,6 +42,8 @@ interface StockWarning {
 
 const { order } = defineProps<{ order: Order }>();
 
+const { error } = useToast();
+
 const breadcrumbs = [
     {
         title: 'Orders',
@@ -55,6 +58,7 @@ const breadcrumbs = [
 const tableRef = ref<{ focusCell: (row: number, col: number) => void } | null>(
     null,
 );
+
 
 const isClient = isClientOrder(order);
 const clientOrSupplier = isClient ? order.client : order.supplier;
@@ -92,8 +96,10 @@ watch(
     () => order,
     (newOrder) => {
         const newIsClient = isClientOrder(newOrder);
-        const newClientOrSupplier = newIsClient ? newOrder.client : newOrder.supplier;
-        
+        const newClientOrSupplier = newIsClient
+            ? newOrder.client
+            : newOrder.supplier;
+
         contactForm.defaults({
             name: newClientOrSupplier?.name || '',
             contact_email: newClientOrSupplier?.contact_email || '',
@@ -101,13 +107,13 @@ watch(
             address: newClientOrSupplier?.address || '',
         });
         contactForm.reset();
-        
+
         orderForm.defaults({
             client_id: newIsClient ? newOrder.client_id : null,
             supplier_id: !newIsClient ? newOrder.supplier_id : null,
         });
         orderForm.reset();
-        
+
         productsForm.defaults({
             products: newOrder.order_products.map((order_product) => ({
                 id: order_product.product.id,
@@ -119,7 +125,7 @@ watch(
             })),
         });
         productsForm.reset();
-        
+
         selectedClientOrSupplierData.value = newClientOrSupplier;
     },
 );
@@ -181,12 +187,12 @@ const checkStockWarnings = (
 
 const saveAll = () => {
     if (!orderForm.client_id && !orderForm.supplier_id) {
-        alert('Please select a client or supplier');
+        error('Please select a client or supplier');
         return;
     }
 
     if (!productsForm.products || productsForm.products.length === 0) {
-        alert('Please add at least one product');
+        error('Please add at least one product');
         return;
     }
 
@@ -199,7 +205,7 @@ const saveAll = () => {
         }));
 
     if (orderProducts.length === 0) {
-        alert('Please select valid products');
+        error('Please select valid products');
         return;
     }
 
@@ -275,6 +281,37 @@ const deleteOrder = () => {
         const route = orders.destroy(order.id);
         router.visit(route.url, { method: route.method });
     }
+};
+
+const handlePrintPreview = () => {
+    window.open(orders.print(order.id).url, '_blank');
+};
+
+const handlePrint = () => {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    document.body.appendChild(iframe);
+
+    iframe.onload = function () {
+        const iframeWindow = iframe.contentWindow;
+        if (!iframeWindow) return;
+
+        const cleanupIframe = () => {
+            if (document.body.contains(iframe)) {
+                document.body.removeChild(iframe);
+            }
+        };
+
+        iframeWindow.addEventListener('afterprint', cleanupIframe, { once: true });
+
+        const fallbackTimeout = setTimeout(cleanupIframe, 60000);
+
+        iframeWindow.addEventListener('afterprint', () => clearTimeout(fallbackTimeout), { once: true });
+
+        iframeWindow.print();
+    };
+
+    iframe.src = orders.print(order.id).url;
 };
 
 const calculatedTotal = computed(() => {
@@ -512,24 +549,44 @@ const columns: ColumnDef<ProductItem>[] = [
             <Card>
                 <CardHeader class="py-3">
                     <CardTitle class="text-lg">Products</CardTitle>
-                    <div class="mt-3 flex items-center justify-end gap-3">
-                        <div class="text-sm font-medium">
-                            Total:
-                            <span class="text-base font-semibold">
-                                {{ formattedTotal }}
-                            </span>
-                        </div>
+                    <div class="mt-3 flex items-center justify-between gap-3">
                         <div class="flex gap-2">
                             <Button
                                 size="sm"
                                 variant="outline"
-                                @click="resetAll"
+                                @click="handlePrintPreview"
                             >
-                                Reset
+                                <Eye class="mr-2 h-4 w-4" />
+                                Print Preview
                             </Button>
-                            <Button size="sm" @click="saveAll"
-                                >Save Changes</Button
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                @click="handlePrint"
                             >
+                                <Printer class="mr-2 h-4 w-4" />
+                                Print
+                            </Button>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <div class="text-sm font-medium">
+                                Total:
+                                <span class="text-base font-semibold">
+                                    {{ formattedTotal }}
+                                </span>
+                            </div>
+                            <div class="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    @click="resetAll"
+                                >
+                                    Reset
+                                </Button>
+                                <Button size="sm" @click="saveAll"
+                                    >Save Changes</Button
+                                >
+                            </div>
                         </div>
                     </div>
                 </CardHeader>

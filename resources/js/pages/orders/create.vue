@@ -4,7 +4,9 @@ import { ExcelTable } from '@/components/excel-table';
 import SearchSelector from '@/components/SearchSelector.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { formatCurrency } from '@/lib/utils';
 import orders from '@/routes/orders/index';
@@ -13,6 +15,13 @@ import { Client, Supplier } from '@/types/orders';
 import { Head, useForm } from '@inertiajs/vue3';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { computed, h, nextTick, ref } from 'vue';
+import { useToast } from '@/composables/useToast';
+
+const props = defineProps<{
+    type?: string;
+}>();
+
+const { error } = useToast();
 
 interface ProductItem {
     id: number;
@@ -53,7 +62,13 @@ const tableRef = ref<{ focusCell: (row: number, col: number) => void } | null>(
     null,
 );
 
+const showPrintPreview = ref(false);
+
 const selectedClientData = ref<Client | Supplier | null>(null);
+
+const orderType = ref<'client' | 'supplier'>(
+    props.type === 'supplier' ? 'supplier' : 'client',
+);
 
 const contactForm = useForm({
     name: '',
@@ -122,12 +137,12 @@ const checkStockWarnings = (
 
 const saveAll = () => {
     if (!orderForm.client_id && !orderForm.supplier_id) {
-        alert('Please select a client or supplier');
+        error('Please select a client or supplier');
         return;
     }
 
     if (!productsForm.products || productsForm.products.length === 0) {
-        alert('Please add at least one product');
+        error('Please add at least one product');
         return;
     }
 
@@ -140,7 +155,7 @@ const saveAll = () => {
         }));
 
     if (orderProducts.length === 0) {
-        alert('Please select valid products');
+        error('Please select valid products');
         return;
     }
 
@@ -205,6 +220,29 @@ const resetAll = () => {
     orderForm.reset();
     productsForm.reset();
 };
+
+const handleOrderTypeChange = (newType: string) => {
+    orderType.value = newType as 'client' | 'supplier';
+    // Reset the form when switching order types
+    orderForm.reset();
+    contactForm.reset();
+    selectedClientData.value = null;
+};
+
+const previewProducts = computed(() => {
+    return productsForm.products
+        .filter((p) => p.id)
+        .map((product) => ({
+            product_name: product.name,
+            product_sku: product.sku,
+            quantity: parseInt(product.stock) || 0,
+            price: formatCurrency(parseFloat(product.price) || 0),
+            subtotal: formatCurrency(
+                (parseFloat(product.price) || 0) *
+                    (parseInt(product.stock) || 0),
+            ),
+        }));
+});
 
 const calculatedTotal = computed(() => {
     if (!productsForm.products || productsForm.products.length === 0) return 0;
@@ -401,11 +439,28 @@ const columns: ColumnDef<ProductItem>[] = [
     <Head title="Create Order" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="space-y-4">
+            <Tabs v-model="orderType" class="w-full">
+                <TabsList class="mb-4 grid w-full max-w-md grid-cols-2">
+                    <TabsTrigger
+                        value="client"
+                        @click="handleOrderTypeChange('client')"
+                    >
+                        Client Order
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="supplier"
+                        @click="handleOrderTypeChange('supplier')"
+                    >
+                        Supplier Order
+                    </TabsTrigger>
+                </TabsList>
+            </Tabs>
+
             <ContactInfoCard
                 :contact="contactForm"
                 :order="null"
+                :order-type="orderType"
                 :selected-client-data="selectedClientData"
-                order-type="client"
                 @update:contact="
                     (value) => {
                         contactForm.name = value.name;
@@ -416,9 +471,14 @@ const columns: ColumnDef<ProductItem>[] = [
                 "
                 @update:client-id="
                     (value: number | null, data?: Client | Supplier | null) => {
-                        orderForm.client_id = value;
+                        if (orderType === 'client') {
+                            orderForm.client_id = value;
+                            orderForm.supplier_id = null;
+                        } else {
+                            orderForm.supplier_id = value;
+                            orderForm.client_id = null;
+                        }
                         contactForm.name = data?.name || '';
-                        orderForm.supplier_id = null;
                         selectedClientData = data ?? null;
                         if (data) {
                             contactForm.contact_email =
@@ -432,11 +492,9 @@ const columns: ColumnDef<ProductItem>[] = [
             />
 
             <Card>
-                <CardHeader
-                    class="flex flex-row items-center justify-between py-3"
-                >
+                <CardHeader class="py-3">
                     <CardTitle class="text-lg">Products</CardTitle>
-                    <div class="flex items-center gap-3">
+                    <div class="mt-3 flex items-center justify-end gap-3">
                         <div class="text-sm font-medium">
                             Total:
                             <span class="text-base font-semibold">
@@ -445,14 +503,14 @@ const columns: ColumnDef<ProductItem>[] = [
                         </div>
                         <div class="flex gap-2">
                             <Button
-                                type="button"
                                 size="sm"
+                                type="button"
                                 variant="outline"
                                 @click="resetAll"
                             >
                                 Reset
                             </Button>
-                            <Button type="button" size="sm" @click="saveAll"
+                            <Button size="sm" type="button" @click="saveAll"
                                 >Create Order</Button
                             >
                         </div>
@@ -470,5 +528,164 @@ const columns: ColumnDef<ProductItem>[] = [
                 </CardContent>
             </Card>
         </div>
+
+        <Dialog v-model:open="showPrintPreview">
+            <DialogContent
+                class="max-h-[90vh] w-full overflow-y-auto rounded-lg sm:!max-w-[50vw]"
+            >
+                <DialogHeader>
+                    <DialogTitle>Print Preview - New Order</DialogTitle>
+                    <DialogDescription>
+                        Review the order details before creating
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="mt-4 space-y-6">
+                    <!-- Order Info Section -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-2 rounded-lg border p-4">
+                            <h3 class="text-sm font-semibold">
+                                Order Information
+                            </h3>
+                            <div class="space-y-1 text-sm">
+                                <p>
+                                    <strong>Order Number:</strong> (Will be
+                                    generated)
+                                </p>
+                                <p>
+                                    <strong>Type:</strong>
+                                    {{
+                                        orderForm.client_id
+                                            ? 'Client Order'
+                                            : 'Supplier Order'
+                                    }}
+                                </p>
+                                <p>
+                                    <strong>Date:</strong>
+                                    {{ new Date().toLocaleString() }}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2 rounded-lg border p-4">
+                            <h3 class="text-sm font-semibold">
+                                {{
+                                    orderForm.client_id ? 'Client' : 'Supplier'
+                                }}
+                                Information
+                            </h3>
+                            <div class="space-y-1 text-sm">
+                                <p>
+                                    <strong>Name:</strong>
+                                    {{ contactForm.name || 'N/A' }}
+                                </p>
+                                <p v-if="contactForm.contact_email">
+                                    <strong>Email:</strong>
+                                    {{ contactForm.contact_email }}
+                                </p>
+                                <p v-if="contactForm.contact_phone">
+                                    <strong>Phone:</strong>
+                                    {{ contactForm.contact_phone }}
+                                </p>
+                                <p v-if="contactForm.address">
+                                    <strong>Address:</strong>
+                                    {{ contactForm.address }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products Table -->
+                    <div class="rounded-lg border">
+                        <table class="w-full">
+                            <thead class="bg-muted">
+                                <tr>
+                                    <th
+                                        class="px-4 py-3 text-left text-sm font-semibold"
+                                    >
+                                        Product Name
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-left text-sm font-semibold"
+                                    >
+                                        SKU
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-right text-sm font-semibold"
+                                    >
+                                        Quantity
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-right text-sm font-semibold"
+                                    >
+                                        Unit Price
+                                    </th>
+                                    <th
+                                        class="px-4 py-3 text-right text-sm font-semibold"
+                                    >
+                                        Subtotal
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="(product, index) in previewProducts"
+                                    :key="index"
+                                    class="border-t"
+                                >
+                                    <td class="px-4 py-3 text-sm">
+                                        {{ product.product_name }}
+                                    </td>
+                                    <td class="px-4 py-3 text-sm">
+                                        {{ product.product_sku }}
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-sm">
+                                        {{ product.quantity }}
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-sm">
+                                        {{ product.price }}
+                                    </td>
+                                    <td class="px-4 py-3 text-right text-sm">
+                                        {{ product.subtotal }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Total Section -->
+                    <div class="flex justify-end">
+                        <div class="min-w-64 rounded-lg bg-muted p-4">
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-semibold"
+                                    >Total:</span
+                                >
+                                <span class="text-2xl font-bold">{{
+                                    formattedTotal
+                                }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-end gap-2 border-t pt-4">
+                        <Button
+                            variant="outline"
+                            @click="showPrintPreview = false"
+                        >
+                            Close
+                        </Button>
+                        <Button
+                            @click="
+                                saveAll();
+                                showPrintPreview = false;
+                            "
+                        >
+                            Create Order
+                        </Button>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

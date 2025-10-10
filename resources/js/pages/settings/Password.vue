@@ -29,7 +29,7 @@ const currentPasswordInput = ref<HTMLInputElement | null>(null);
         <Head title="Password settings" />
 
         <SettingsLayout>
-            <div class="space-y-6">
+            <div class="space-y-6 max-w-2xl">
                 <HeadingSmall
                     description="Ensure your account is using a long, random password to stay secure"
                     title="Update password"

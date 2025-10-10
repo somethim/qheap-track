@@ -3,6 +3,8 @@ import AppContent from '@/components/AppContent.vue';
 import AppShell from '@/components/AppShell.vue';
 import AppSidebar from '@/components/AppSidebar.vue';
 import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import AppTabBar from '@/components/AppTabBar.vue';
+import AppTabContainer from '@/components/AppTabContainer.vue';
 import type { BreadcrumbItemType } from '@/types';
 
 interface Props {
@@ -18,8 +20,13 @@ withDefaults(defineProps<Props>(), {
     <AppShell variant="sidebar">
         <AppSidebar />
         <AppContent class="overflow-x-hidden" variant="sidebar">
-            <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <slot />
+            <AppTabBar />
+            <AppTabContainer>
+                <template #default>
+                    <AppSidebarHeader :breadcrumbs="breadcrumbs" />
+                    <slot />
+                </template>
+            </AppTabContainer>
         </AppContent>
     </AppShell>
 </template>

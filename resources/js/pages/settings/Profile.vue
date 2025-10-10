@@ -37,7 +37,7 @@ const user = page.props.auth.user;
         <Head title="Profile settings" />
 
         <SettingsLayout>
-            <div class="flex flex-col space-y-6">
+            <div class="flex flex-col space-y-6 max-w-2xl">
                 <HeadingSmall
                     description="Update your name and email address"
                     title="Profile information"
@@ -120,7 +120,9 @@ const user = page.props.auth.user;
                 </Form>
             </div>
 
-            <DeleteUser />
+            <div class="max-w-2xl">
+                <DeleteUser />
+            </div>
         </SettingsLayout>
     </AppLayout>
 </template>

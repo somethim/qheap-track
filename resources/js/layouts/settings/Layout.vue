@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toUrl, urlIsActive } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
+import { edit as editExport } from '@/routes/export';
+import { edit as editImport } from '@/routes/import';
 import { edit as editPassword } from '@/routes/password';
 import { edit as editProfile } from '@/routes/profile';
 import { type NavItem } from '@/types';
@@ -21,6 +23,14 @@ const sidebarNavItems: NavItem[] = [
     {
         title: 'Appearance',
         href: editAppearance(),
+    },
+    {
+        title: 'Import',
+        href: editImport(),
+    },
+    {
+        title: 'Export',
+        href: editExport(),
     },
 ];
 
@@ -57,8 +67,8 @@ const currentPath = typeof window !== undefined ? window.location.pathname : '';
 
             <Separator class="my-6 lg:hidden" />
 
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+            <div class="flex-1">
+                <section class="space-y-12">
                     <slot />
                 </section>
             </div>

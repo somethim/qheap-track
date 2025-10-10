@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Settings\AppearanceController;
+use App\Http\Controllers\Settings\ExportController;
+use App\Http\Controllers\Settings\ImportController;
 use App\Http\Controllers\Settings\PasswordController;
 use App\Http\Controllers\Settings\ProfileController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
 Route::middleware('auth')->group(function () {
     Route::redirect('settings', '/settings/profile');
@@ -18,7 +20,11 @@ Route::middleware('auth')->group(function () {
         ->middleware('throttle:6,1')
         ->name('password.update');
 
-    Route::get('settings/appearance', function () {
-        return Inertia::render('settings/Appearance');
-    })->name('appearance.edit');
+    Route::get('settings/appearance', [AppearanceController::class, 'edit'])->name('appearance.edit');
+
+    Route::get('settings/import', [ImportController::class, 'edit'])->name('import.edit');
+    Route::post('settings/import', [ImportController::class, 'store'])->name('import.store');
+
+    Route::get('settings/export', [ExportController::class, 'edit'])->name('export.edit');
+    Route::post('settings/export', [ExportController::class, 'store'])->name('export.store');
 });

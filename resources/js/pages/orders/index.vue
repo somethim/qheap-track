@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { DataTable } from '@/components/data-table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/AppLayout.vue';
 import orders from '@/routes/orders/index';
 import { BreadcrumbItem, PaginatedData } from '@/types';
@@ -9,7 +10,7 @@ import { Head, router } from '@inertiajs/vue3';
 import { ColumnDef } from '@tanstack/vue-table';
 import { computed, h, onMounted } from 'vue';
 
-const props = defineProps<PaginatedData<Order>>();
+const props = defineProps<PaginatedData<Order> & { type: string }>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -111,7 +112,17 @@ const showOrder = (row: Order) => {
 };
 
 const addOrder = () => {
-    router.visit(orders.create().url);
+    router.visit(orders.create.url({ query: { type: props.type || 'client' } }));
+};
+
+const handleOrderTypeChange = (newType: string) => {
+    const newParams = new URLSearchParams();
+    newParams.set('type', newType);
+    
+    router.visit(`${window.location.pathname}?${newParams.toString()}`, {
+        preserveState: false,
+        preserveScroll: false,
+    });
 };
 
 const search = (query: string) => {
@@ -125,6 +136,10 @@ const search = (query: string) => {
     }
 
     newParams.set('page', '1');
+    
+    if (!newParams.has('type')) {
+        newParams.set('type', props.type || 'client');
+    }
 
     router.visit(`${window.location.pathname}?${newParams.toString()}`, {
         preserveState: true,
@@ -137,6 +152,10 @@ const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
     newParams.set('sort_by', sortBy);
     newParams.set('sort_direction', sortDirection);
     newParams.set('page', '1');
+    
+    if (!newParams.has('type')) {
+        newParams.set('type', props.type || 'client');
+    }
 
     router.visit(`${window.location.pathname}?${newParams.toString()}`, {
         preserveState: true,
@@ -145,8 +164,13 @@ const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
 };
 
 const handleNavigate = (query: QueryParams) => {
+    const queryWithType = {
+        ...query,
+        type: props.type || 'client',
+    };
+    
     router.get(
-        orders.index.url({ query }),
+        orders.index.url({ query: queryWithType }),
         {},
         {
             preserveState: true,
@@ -191,23 +215,63 @@ onMounted(() => {
 <template>
     <Head title="Orders" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <DataTable
-            :add-item="addOrder"
-            :columns="columns"
-            :data="props.items"
-            :end-date="currentEndDate"
-            :on-navigate="handleNavigate"
-            :on-sort="handleSort"
-            :pagination="props.pagination"
-            :row-click="showOrder"
-            :search="search"
-            :search-query="currentSearchQuery"
-            :show-date-controls="true"
-            :show-pagination="true"
-            :show-search="true"
-            :sort-by="currentSortBy"
-            :sort-direction="currentSortDirection"
-            :start-date="currentStartDate"
-        />
+        <Tabs :default-value="props.type || 'client'" class="w-full">
+            <TabsList class="mb-4 grid w-full max-w-md grid-cols-2">
+                <TabsTrigger 
+                    value="client" 
+                    @click="handleOrderTypeChange('client')"
+                >
+                    Client Orders
+                </TabsTrigger>
+                <TabsTrigger 
+                    value="supplier"
+                    @click="handleOrderTypeChange('supplier')"
+                >
+                    Supplier Orders
+                </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="client" class="mt-0">
+                <DataTable
+                    :add-item="addOrder"
+                    :columns="columns"
+                    :data="props.items"
+                    :end-date="currentEndDate"
+                    :on-navigate="handleNavigate"
+                    :on-sort="handleSort"
+                    :pagination="props.pagination"
+                    :row-click="showOrder"
+                    :search="search"
+                    :search-query="currentSearchQuery"
+                    :show-date-controls="true"
+                    :show-pagination="true"
+                    :show-search="true"
+                    :sort-by="currentSortBy"
+                    :sort-direction="currentSortDirection"
+                    :start-date="currentStartDate"
+                />
+            </TabsContent>
+            
+            <TabsContent value="supplier" class="mt-0">
+                <DataTable
+                    :add-item="addOrder"
+                    :columns="columns"
+                    :data="props.items"
+                    :end-date="currentEndDate"
+                    :on-navigate="handleNavigate"
+                    :on-sort="handleSort"
+                    :pagination="props.pagination"
+                    :row-click="showOrder"
+                    :search="search"
+                    :search-query="currentSearchQuery"
+                    :show-date-controls="true"
+                    :show-pagination="true"
+                    :show-search="true"
+                    :sort-by="currentSortBy"
+                    :sort-direction="currentSortDirection"
+                    :start-date="currentStartDate"
+                />
+            </TabsContent>
+        </Tabs>
     </AppLayout>
 </template>

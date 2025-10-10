@@ -28,9 +28,9 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
-        $user = User::where('email', $this->string('email'))->firstOrFail();
+        $user = User::where('email', $this->string('email'))->first();
 
-        if (! Hash::check($this->string('password'), $user->password)) {
+        if (! $user || ! Hash::check($this->string('password'), $user->password)) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
