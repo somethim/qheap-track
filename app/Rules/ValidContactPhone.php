@@ -24,9 +24,8 @@ class ValidContactPhone implements ValidationRule
             return;
         }
 
-        if (!ContactVerificationUtils::validatePhoneNumber($value, $this->defaultRegion)) {
+        if (! ContactVerificationUtils::validatePhoneNumber($value, $this->defaultRegion)) {
             $fail(__('validation.contact_phone_invalid'));
         }
     }
 }
-

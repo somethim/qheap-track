@@ -71,7 +71,7 @@ class SupplierController extends Controller
     public function show(Supplier $supplier)
     {
         $supplier->load('orders');
-        
+
         return Inertia::render('suppliers/show', [
             'supplier' => [
                 ...$supplier->toArray(),

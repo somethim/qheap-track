@@ -3,7 +3,14 @@
     lang="ts"
     setup
 >
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { computed, h, nextTick, ref } from 'vue';
 
