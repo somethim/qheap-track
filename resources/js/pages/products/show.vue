@@ -15,6 +15,7 @@ import { BreadcrumbItem } from '@/types';
 import { Product } from '@/types/orders';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Trash2 } from 'lucide-vue-next';
+import { watch } from 'vue';
 
 const props = defineProps<{ product: Product }>();
 
@@ -35,6 +36,19 @@ const form = useForm({
     stock: props.product.stock.toString(),
     sku: props.product.sku,
 });
+
+watch(
+    () => props.product,
+    (newProduct) => {
+        form.defaults({
+            name: newProduct.name,
+            price: newProduct.price.toString(),
+            stock: newProduct.stock.toString(),
+            sku: newProduct.sku,
+        });
+        form.reset();
+    },
+);
 
 const submitForm = () => {
     form.put(products.update(props.product.id).url, {

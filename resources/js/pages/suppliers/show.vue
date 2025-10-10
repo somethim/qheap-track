@@ -13,6 +13,7 @@ import { BreadcrumbItem } from '@/types';
 import { Supplier } from '@/types/orders';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Trash2 } from 'lucide-vue-next';
+import { watch } from 'vue';
 
 const props = defineProps<{ supplier: Supplier }>();
 
@@ -34,6 +35,20 @@ const form = useForm({
     contact_phone: props.supplier.contact_phone || '',
     address: props.supplier.address || '',
 });
+
+watch(
+    () => props.supplier,
+    (newSupplier) => {
+        form.defaults({
+            name: newSupplier.name,
+            description: newSupplier.description || '',
+            contact_email: newSupplier.contact_email || '',
+            contact_phone: newSupplier.contact_phone || '',
+            address: newSupplier.address || '',
+        });
+        form.reset();
+    },
+);
 
 const submitForm = () => {
     form.put(suppliers.update(props.supplier.id).url, {

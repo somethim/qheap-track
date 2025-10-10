@@ -13,7 +13,7 @@ import { Client, isClientOrder, Order, Supplier } from '@/types/orders';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { Trash2 } from 'lucide-vue-next';
-import { computed, h, nextTick, ref } from 'vue';
+import { computed, h, nextTick, ref, watch } from 'vue';
 
 interface ProductItem {
     id: number;
@@ -87,6 +87,42 @@ const productsForm = useForm<{
         available_stock: order_product.product.stock,
     })),
 });
+
+watch(
+    () => order,
+    (newOrder) => {
+        const newIsClient = isClientOrder(newOrder);
+        const newClientOrSupplier = newIsClient ? newOrder.client : newOrder.supplier;
+        
+        contactForm.defaults({
+            name: newClientOrSupplier?.name || '',
+            contact_email: newClientOrSupplier?.contact_email || '',
+            contact_phone: newClientOrSupplier?.contact_phone || '',
+            address: newClientOrSupplier?.address || '',
+        });
+        contactForm.reset();
+        
+        orderForm.defaults({
+            client_id: newIsClient ? newOrder.client_id : null,
+            supplier_id: !newIsClient ? newOrder.supplier_id : null,
+        });
+        orderForm.reset();
+        
+        productsForm.defaults({
+            products: newOrder.order_products.map((order_product) => ({
+                id: order_product.product.id,
+                name: order_product.product.name,
+                sku: order_product.product.sku,
+                price: order_product.price?.toString() || '0',
+                stock: order_product.stock?.toString() || '0',
+                available_stock: order_product.product.stock,
+            })),
+        });
+        productsForm.reset();
+        
+        selectedClientOrSupplierData.value = newClientOrSupplier;
+    },
+);
 
 const findAndFocusExistingProduct = async (
     productId: number,

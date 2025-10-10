@@ -26,6 +26,7 @@ import { BreadcrumbItem } from '@/types';
 import { Client } from '@/types/orders';
 import { Head, router, useForm } from '@inertiajs/vue3';
 import { Trash2 } from 'lucide-vue-next';
+import { watch } from 'vue';
 
 const props = defineProps<{ client: Client }>();
 
@@ -47,6 +48,20 @@ const form = useForm({
     contact_phone: props.client.contact_phone || '',
     address: props.client.address || '',
 });
+
+watch(
+    () => props.client,
+    (newClient) => {
+        form.defaults({
+            name: newClient.name,
+            description: newClient.description || '',
+            contact_email: newClient.contact_email || '',
+            contact_phone: newClient.contact_phone || '',
+            address: newClient.address || '',
+        });
+        form.reset();
+    },
+);
 
 const submitForm = () => {
     form.put(clients.update(props.client.id).url, {
