@@ -1,4 +1,8 @@
-<script generic="TData, TValue" lang="ts" setup>
+<script
+    generic="TData extends { id?: number | string }, TValue"
+    lang="ts"
+    setup
+>
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ColumnDef } from '@tanstack/vue-table';
 import { computed, h, nextTick, ref } from 'vue';
@@ -30,7 +34,7 @@ const getNextCell = (
     direction: 'next' | 'prev' | 'down',
 ): { row: number; col: number } | null => {
     const { columns } = props;
-    const totalRows = props.data.length + 1; // +1 for empty row
+    const totalRows = props.data.length + 1;
     const totalCols = columns.length;
 
     if (direction === 'next') {
@@ -58,21 +62,32 @@ const focusCell = async (row: number, col: number) => {
     const cellId = getCellId(row, col);
     const cellElement = cellRefs.value.get(cellId);
 
-    if (cellElement) {
-        focusedCell.value = { row, col };
-        await nextTick();
+    if (!cellElement) {
+        return;
+    }
+    focusedCell.value = { row, col };
+    await nextTick();
 
-        const input = cellElement.querySelector(
-            'input, [contenteditable="true"]',
-        ) as HTMLElement;
-        if (input) {
-            input.focus();
-            if (input.tagName === 'INPUT') {
-                (input as HTMLInputElement).select();
-            }
+    const domElement = (cellElement as any).$el || cellElement;
+
+    if (!domElement || typeof domElement.querySelector !== 'function') {
+        return;
+    }
+
+    const input = domElement.querySelector(
+        'input, [contenteditable="true"]',
+    ) as HTMLElement;
+    if (input) {
+        input.focus();
+        if (input.tagName === 'INPUT') {
+            (input as HTMLInputElement).select();
         }
     }
 };
+
+defineExpose({
+    focusCell,
+});
 
 const handleKeyDown = (event: KeyboardEvent, row: number, col: number) => {
     const { key, shiftKey } = event;
@@ -143,7 +158,10 @@ const renderCell = (row: number, column: ColumnDef<TData, TValue>) => {
         const rowData =
             row < props.data.length ? props.data[row] : ({} as TData);
         const cellContext = {
-            row: { original: rowData },
+            row: {
+                original: rowData,
+                index: row,
+            },
             column: column,
         };
         return column.cell(cellContext as Parameters<typeof column.cell>[0]);
@@ -191,7 +209,7 @@ const tableData = computed(() => {
             </TableHeader>
             <TableBody>
                 <TableRow
-                    v-for="(_, rowIndex) in tableData"
+                    v-for="(row, rowIndex) in tableData"
                     :key="rowIndex"
                     class="hover:bg-muted/50"
                 >

@@ -7,13 +7,22 @@ import {
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
-    SidebarMenuItem
+    SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import orders from '@/routes/orders';
+import clients from '@/routes/clients/index';
+import orders from '@/routes/orders/index';
+import products from '@/routes/products/index';
+import suppliers from '@/routes/suppliers/index';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { LayoutGrid, List } from 'lucide-vue-next';
+import {
+    LayoutGrid,
+    Package,
+    Receipt,
+    TruckIcon,
+    Users,
+} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -25,7 +34,22 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Orders',
         href: orders.index(),
-        icon: List,
+        icon: Receipt,
+    },
+    {
+        title: 'Clients',
+        href: clients.index(),
+        icon: Users,
+    },
+    {
+        title: 'Suppliers',
+        href: suppliers.index(),
+        icon: TruckIcon,
+    },
+    {
+        title: 'Products',
+        href: products.index(),
+        icon: Package,
     },
 ];
 </script>

@@ -1,28 +1,22 @@
 <script lang="ts" setup>
 import { DataTable } from '@/components/data-table';
 import AppLayout from '@/layouts/AppLayout.vue';
-import orders from '@/routes/orders/index';
+import suppliers from '@/routes/suppliers/index';
 import { BreadcrumbItem, PaginatedData } from '@/types';
-import { isClientOrder, Order } from '@/types/orders';
+import { Supplier } from '@/types/orders';
 import type { QueryParams } from '@/wayfinder';
 import { Head, router } from '@inertiajs/vue3';
 import { ColumnDef } from '@tanstack/vue-table';
 import { computed, h, onMounted } from 'vue';
 
-const props = defineProps<PaginatedData<Order>>();
+const props = defineProps<PaginatedData<Supplier>>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Orders',
-        href: orders.index().url,
+        title: 'Suppliers',
+        href: suppliers.index().url,
     },
 ];
-
-const orderType = computed(() => {
-    return props.items.length > 0 && isClientOrder(props.items[0])
-        ? 'client'
-        : 'supplier';
-});
 
 const urlParams = computed(() => new URLSearchParams(window.location.search));
 
@@ -40,55 +34,59 @@ const currentSortDirection = computed(
     () => (urlParams.value.get('sort_direction') as 'asc' | 'desc') ?? 'desc',
 );
 
-const columns: ColumnDef<Order>[] = [
+const columns: ColumnDef<Supplier>[] = [
     {
-        accessorKey: 'order_number',
-        enableSorting: false,
-        header: () => h('div', { class: 'text-left' }, 'Order #'),
+        id: 'name',
+        accessorKey: 'name',
+        enableSorting: true,
+        header: () => h('div', { class: 'text-left' }, 'Name'),
         cell: ({ row }) => {
-            const orderNumber = row.original.order_number;
-            const shortNumber = orderNumber.slice(-8);
             return h(
                 'div',
                 {
-                    class: 'text-left font-mono',
-                    title: orderNumber,
+                    class: 'text-left font-medium',
                 },
-                shortNumber,
+                row.original.name,
             );
         },
     },
     {
-        id: `${orderType.value}_name`,
-        accessorKey: `${orderType.value}_id`,
+        id: 'contact_email',
+        accessorKey: 'contact_email',
         enableSorting: true,
-        accessorFn: (row) =>
-            isClientOrder(row) ? row.client.name : row.supplier.name,
-        header: orderType.value === 'client' ? 'Client' : 'Supplier',
+        header: 'Email',
         cell: ({ row }) => {
-            const order = row.original;
-            if (isClientOrder(order)) {
-                return h('span', order.client.name);
-            }
-            return h('span', order.supplier.name);
+            return h(
+                'span',
+                { class: 'text-muted-foreground' },
+                row.original.contact_email || '—',
+            );
         },
     },
     {
-        id: 'cost',
-        accessorKey: 'cost',
+        id: 'contact_phone',
+        accessorKey: 'contact_phone',
         enableSorting: true,
-        header: 'Price',
+        header: 'Phone',
         cell: ({ row }) => {
-            return h('div', { class: 'text-left font-mono' }, row.original.formatted_cost);
+            return h(
+                'span',
+                { class: 'text-muted-foreground' },
+                row.original.contact_phone || '—',
+            );
         },
     },
     {
-        id: 'stock',
-        accessorKey: 'stock',
+        id: 'order_count',
+        accessorKey: 'orders_count',
         enableSorting: true,
-        header: 'stock',
+        header: 'Orders',
         cell: ({ row }) => {
-            return h('span', row.original.stock);
+            return h(
+                'div',
+                { class: 'text-left font-mono' },
+                row.original.orders_count ?? 0,
+            );
         },
     },
     {
@@ -106,12 +104,12 @@ const columns: ColumnDef<Order>[] = [
     },
 ];
 
-const showOrder = (row: Order) => {
-    router.visit(orders.show(row.id).url);
+const showSupplier = (row: Supplier) => {
+    router.visit(suppliers.show(row.id).url);
 };
 
-const addOrder = () => {
-    router.visit(orders.create().url);
+const addSupplier = () => {
+    router.visit(suppliers.create().url);
 };
 
 const search = (query: string) => {
@@ -146,7 +144,7 @@ const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
 
 const handleNavigate = (query: QueryParams) => {
     router.get(
-        orders.index.url({ query }),
+        suppliers.index.url({ query }),
         {},
         {
             preserveState: true,
@@ -175,7 +173,7 @@ onMounted(() => {
 
         if (hasFilters) {
             router.get(
-                orders.index().url,
+                suppliers.index().url,
                 {},
                 {
                     preserveState: false,
@@ -189,17 +187,17 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Orders" />
+    <Head title="Suppliers" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <DataTable
-            :add-item="addOrder"
+            :add-item="addSupplier"
             :columns="columns"
             :data="props.items"
             :end-date="currentEndDate"
             :on-navigate="handleNavigate"
             :on-sort="handleSort"
             :pagination="props.pagination"
-            :row-click="showOrder"
+            :row-click="showSupplier"
             :search="search"
             :search-query="currentSearchQuery"
             :show-date-controls="true"

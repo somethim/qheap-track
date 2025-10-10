@@ -30,7 +30,7 @@ class Supplier extends Model
     {
         static::addGlobalScope('user', function (Builder $builder) {
             if (auth()->check()) {
-                $builder->where('user_id', auth()->id());
+                $builder->where('suppliers.user_id', auth()->id());
             }
         });
     }
@@ -42,7 +42,7 @@ class Supplier extends Model
 
     public function scopeForUser(Supplier $supplier, int $userId): Builder
     {
-        return $supplier->withoutGlobalScope('user')->where('user_id', $userId);
+        return $supplier->withoutGlobalScope('user')->where('suppliers.user_id', $userId);
     }
 
     public function scopeAllUsers(Supplier $supplier): Builder

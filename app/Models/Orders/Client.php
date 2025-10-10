@@ -30,7 +30,7 @@ class Client extends Model
     {
         static::addGlobalScope('user', function (Builder $builder) {
             if (auth()->check()) {
-                $builder->where('user_id', auth()->id());
+                $builder->where('clients.user_id', auth()->id());
             }
         });
     }
@@ -42,7 +42,7 @@ class Client extends Model
 
     public function scopeForUser(Client $client, int $userId): Builder
     {
-        return $client->withoutGlobalScope('user')->where('user_id', $userId);
+        return $client->withoutGlobalScope('user')->where('clients.user_id', $userId);
     }
 
     public function scopeAllUsers(Client $client): Builder

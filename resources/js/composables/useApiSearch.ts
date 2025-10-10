@@ -1,10 +1,10 @@
-import { ref, shallowRef, type Ref } from 'vue';
+import { ref, type Ref, shallowRef } from 'vue';
 
 export interface ApiSearchControls<TItem> {
     itemsList: Ref<TItem[]>;
     isLoading: Ref<boolean>;
     error: Ref<string | null>;
-    performSearch: (term: string) => Promise<void>;
+    performSearch: (search: string) => Promise<void>;
     clearResults: () => void;
 }
 
@@ -12,7 +12,7 @@ export function useApiSearch<TItem extends Record<string, unknown>>(
     searchUrl: string,
     searchDelay: number = 300,
     responseKey: string = 'searchResults',
-    searchParam: string = 'term',
+    searchParam: string = 'search',
 ): ApiSearchControls<TItem> {
     const itemsList = shallowRef<TItem[]>([]);
     const isLoading = ref<boolean>(false);
@@ -26,11 +26,11 @@ export function useApiSearch<TItem extends Record<string, unknown>>(
         }
     };
 
-    const performSearch = async (term: string): Promise<void> => {
+    const performSearch = async (search: string): Promise<void> => {
         clearSearchTimeout();
 
         searchTimeout = window.setTimeout(async () => {
-            const searchTerm = term.trim() === '' ? '' : term.trim();
+            const searchTerm = search.trim() === '' ? '' : search.trim();
 
             try {
                 isLoading.value = true;

@@ -22,8 +22,6 @@ class DatabaseSeeder extends Seeder
 
     const int ORDER_PER_CLIENT_COUNT = 7;
 
-    const int ORDER_PER_SUPPLIER_COUNT = 106;
-
     /**
      * Seed the application's database.
      */
@@ -54,10 +52,9 @@ class DatabaseSeeder extends Seeder
         foreach (range(1, self::PRODUCT_COUNT) as $i) {
             $products->push(Product::create([
                 'name' => 'Product '.$i,
-                'description' => 'Description for product '.$i,
+                'sku' => Str::upper(Str::random(3)).'-'.Str::random(8),
                 'price' => rand(100, 100000000) / 100,
                 'stock' => rand(0, 100),
-                'sku' => Str::upper(Str::random(3)).'-'.Str::random(8),
                 'user_id' => $userId,
             ]));
         }

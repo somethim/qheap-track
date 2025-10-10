@@ -3,34 +3,38 @@
 namespace App\Http\Requests\Orders;
 
 use App\Models\Orders\Supplier;
-use App\Models\User;
 use App\Rules\UniqueForUser;
+use App\Rules\ValidContactEmail;
+use App\Rules\ValidContactPhone;
+use App\Utils\ContactVerificationUtils;
 use Illuminate\Foundation\Http\FormRequest;
 
 class SupplierRequest extends FormRequest
 {
     public function rules(): array
     {
+        $supplierId = $this->route('supplier')?->id;
+        
         return [
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                new UniqueForUser(Supplier::class),
+                new UniqueForUser((new Supplier)->getTable(), 'name', $supplierId),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
-            'contact_email' => ['nullable', 'email', 'max:50'],
-            'contact_phone' => ['nullable', 'string', 'max:20'],
+            'contact_email' => ['nullable', 'email', 'max:50', new ValidContactEmail],
+            'contact_phone' => ['nullable', 'string', 'max:20', new ValidContactPhone],
             'address' => ['nullable', 'string', 'max:255'],
-            'user_id' => ['required', 'exists:'.User::class.',id'],
-
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'user_id' => auth()->id(),
-        ]);
+        if ($this->has('contact_email')) {
+            $this->merge([
+                'contact_email' => ContactVerificationUtils::cleanEmailAddress($this->input('contact_email')),
+            ]);
+        }
     }
 }

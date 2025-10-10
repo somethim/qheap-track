@@ -16,3 +16,14 @@ export function urlIsActive(
 export function toUrl(href: NonNullable<InertiaLinkProps['href']>) {
     return typeof href === 'string' ? href : href?.url;
 }
+
+export function formatCurrency(amount: number | string): string {
+    const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    const formatter = new Intl.NumberFormat('sq-AL', {
+        style: 'currency',
+        currency: 'ALL',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+    });
+    return formatter.format(numAmount).replace(/ALL\s?/, '').trim() + ' Lekë';
+}

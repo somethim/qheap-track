@@ -1,28 +1,23 @@
 <script lang="ts" setup>
 import { DataTable } from '@/components/data-table';
 import AppLayout from '@/layouts/AppLayout.vue';
-import orders from '@/routes/orders/index';
+import { formatCurrency } from '@/lib/utils';
+import products from '@/routes/products/index';
 import { BreadcrumbItem, PaginatedData } from '@/types';
-import { isClientOrder, Order } from '@/types/orders';
+import { Product } from '@/types/orders';
 import type { QueryParams } from '@/wayfinder';
 import { Head, router } from '@inertiajs/vue3';
 import { ColumnDef } from '@tanstack/vue-table';
 import { computed, h, onMounted } from 'vue';
 
-const props = defineProps<PaginatedData<Order>>();
+const props = defineProps<PaginatedData<Product>>();
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Orders',
-        href: orders.index().url,
+        title: 'Products',
+        href: products.index().url,
     },
 ];
-
-const orderType = computed(() => {
-    return props.items.length > 0 && isClientOrder(props.items[0])
-        ? 'client'
-        : 'supplier';
-});
 
 const urlParams = computed(() => new URLSearchParams(window.location.search));
 
@@ -40,55 +35,60 @@ const currentSortDirection = computed(
     () => (urlParams.value.get('sort_direction') as 'asc' | 'desc') ?? 'desc',
 );
 
-const columns: ColumnDef<Order>[] = [
+const columns: ColumnDef<Product>[] = [
     {
-        accessorKey: 'order_number',
-        enableSorting: false,
-        header: () => h('div', { class: 'text-left' }, 'Order #'),
+        id: 'name',
+        accessorKey: 'name',
+        enableSorting: true,
+        header: 'Name',
         cell: ({ row }) => {
-            const orderNumber = row.original.order_number;
-            const shortNumber = orderNumber.slice(-8);
             return h(
-                'div',
-                {
-                    class: 'text-left font-mono',
-                    title: orderNumber,
-                },
-                shortNumber,
+                'span',
+                { class: 'text-left font-medium' },
+                row.original.name,
             );
         },
     },
     {
-        id: `${orderType.value}_name`,
-        accessorKey: `${orderType.value}_id`,
+        id: 'sku',
+        accessorKey: 'sku',
         enableSorting: true,
-        accessorFn: (row) =>
-            isClientOrder(row) ? row.client.name : row.supplier.name,
-        header: orderType.value === 'client' ? 'Client' : 'Supplier',
+        header: 'SKU',
         cell: ({ row }) => {
-            const order = row.original;
-            if (isClientOrder(order)) {
-                return h('span', order.client.name);
-            }
-            return h('span', order.supplier.name);
+            return h('span', { class: 'font-mono text-sm' }, row.original.sku);
         },
     },
     {
-        id: 'cost',
-        accessorKey: 'cost',
+        id: 'price',
+        accessorKey: 'price',
         enableSorting: true,
         header: 'Price',
         cell: ({ row }) => {
-            return h('div', { class: 'text-left font-mono' }, row.original.formatted_cost);
+            return h(
+                'span',
+                { class: 'text-left font-mono' },
+                formatCurrency(row.original.price),
+            );
         },
     },
     {
         id: 'stock',
         accessorKey: 'stock',
         enableSorting: true,
-        header: 'stock',
+        header: 'Stock',
         cell: ({ row }) => {
-            return h('span', row.original.stock);
+            const stock = row.original.stock;
+            const className =
+                stock < 10
+                    ? 'text-red-600 font-semibold'
+                    : stock < 50
+                      ? 'text-yellow-600'
+                      : '';
+            return h(
+                'span',
+                { class: `text-left ${className}` },
+                stock.toString(),
+            );
         },
     },
     {
@@ -106,12 +106,12 @@ const columns: ColumnDef<Order>[] = [
     },
 ];
 
-const showOrder = (row: Order) => {
-    router.visit(orders.show(row.id).url);
+const viewProduct = (row: Product) => {
+    router.visit(products.show(row.id).url);
 };
 
-const addOrder = () => {
-    router.visit(orders.create().url);
+const createProduct = () => {
+    router.visit(products.create().url);
 };
 
 const search = (query: string) => {
@@ -146,7 +146,7 @@ const handleSort = (sortBy: string, sortDirection: 'asc' | 'desc') => {
 
 const handleNavigate = (query: QueryParams) => {
     router.get(
-        orders.index.url({ query }),
+        products.index.url({ query }),
         {},
         {
             preserveState: true,
@@ -175,7 +175,7 @@ onMounted(() => {
 
         if (hasFilters) {
             router.get(
-                orders.index().url,
+                products.index().url,
                 {},
                 {
                     preserveState: false,
@@ -189,17 +189,17 @@ onMounted(() => {
 </script>
 
 <template>
-    <Head title="Orders" />
+    <Head title="Products" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <DataTable
-            :add-item="addOrder"
+            :add-item="createProduct"
             :columns="columns"
             :data="props.items"
             :end-date="currentEndDate"
             :on-navigate="handleNavigate"
             :on-sort="handleSort"
             :pagination="props.pagination"
-            :row-click="showOrder"
+            :row-click="viewProduct"
             :search="search"
             :search-query="currentSearchQuery"
             :show-date-controls="true"

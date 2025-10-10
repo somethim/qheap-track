@@ -6,21 +6,97 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Orders\ClientRequest;
 use App\Http\Requests\Search\ClientAndSupplierSearchRequest;
 use App\Models\Orders\Client;
+use App\Utils\Currency;
 use Illuminate\Http\JsonResponse;
+use Inertia\Inertia;
 
 class ClientController extends Controller
 {
-    public function index() {}
+    public function index(ClientAndSupplierSearchRequest $request)
+    {
+        $query = Client::withCount('orders')->newQuery();
 
-    public function create() {}
+        if ($request->getSearchTerm()) {
+            $term = '%'.$request->getSearchTerm().'%';
+            $query->where('name', 'like', $term)
+                ->orWhere('contact_email', 'like', $term)
+                ->orWhere('contact_phone', 'like', $term);
+        }
 
-    public function store(ClientRequest $request) {}
+        if ($startDate = $request->getStartDate()) {
+            $query->where('created_at', '>=', $startDate);
+        }
+        if ($endDate = $request->getEndDate()) {
+            $query->where('created_at', '<=', $endDate);
+        }
 
-    public function show(string $id) {}
+        $sortBy = $request->getSortBy();
+        $sortDirection = $request->getSortDirection();
+        if ($sortBy && $sortDirection) {
+            switch ($sortBy) {
+                case 'order_count':
+                    $query->orderBy('orders_count', $sortDirection);
+                    break;
 
-    public function update(ClientRequest $request, string $id) {}
+                default:
+                    $query->orderBy($sortBy, $sortDirection);
+                    break;
+            }
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
 
-    public function destroy(string $id) {}
+        $paginated = $this->paginate($request, $query);
+
+        return Inertia::render('clients/index', [
+            'items' => $paginated['items'],
+            'pagination' => $paginated['pagination'],
+        ]);
+    }
+
+    public function store(ClientRequest $request)
+    {
+        $client = Client::create($request->validated());
+
+        return redirect()
+            ->route('clients.show', $client)
+            ->with('success', 'Client created successfully.');
+    }
+
+    public function create()
+    {
+        return Inertia::render('clients/create');
+    }
+
+    public function show(Client $client)
+    {
+        $client->load('orders');
+        
+        return Inertia::render('clients/show', [
+            'client' => [
+                ...$client->toArray(),
+                'formatted_cost' => Currency::formatCurrency($client->orders->sum('cost')),
+            ],
+        ]);
+    }
+
+    public function update(ClientRequest $request, Client $client)
+    {
+        $client->update($request->validated());
+
+        return redirect()
+            ->route('clients.show', $client)
+            ->with('success', 'Client updated successfully.');
+    }
+
+    public function destroy(Client $client)
+    {
+        $client->delete();
+
+        return redirect()
+            ->route('clients.index')
+            ->with('success', 'Client deleted successfully.');
+    }
 
     public function search(ClientAndSupplierSearchRequest $request): JsonResponse
     {

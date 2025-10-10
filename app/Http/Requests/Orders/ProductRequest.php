@@ -12,20 +12,22 @@ class ProductRequest extends FormRequest
 {
     public function rules(): array
     {
+        $productId = $this->route('product')?->id;
+
         return [
             'name' => [
                 'required',
                 'string',
                 'max:255',
-                new UniqueForUser(Product::class),
+                new UniqueForUser((new Product)->getTable(), 'name', $productId),
             ],
-            'price' => ['numeric', 'min:0'],
-            'stock' => ['integer', 'min:0'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'stock' => ['required', 'integer', 'min:0'],
             'sku' => [
                 'required',
                 'string',
                 'max:12',
-                new UniqueForUser(Product::class, 'sku'),
+                new UniqueForUser((new Product)->getTable(), 'sku', $productId),
             ],
             'user_id' => ['required', 'exists:'.User::class.',id'],
         ];

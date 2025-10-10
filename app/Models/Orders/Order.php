@@ -46,13 +46,12 @@ class Order extends Model
     {
         static::addGlobalScope('user', function (Builder $builder) {
             if (auth()->check()) {
-                $builder->where('user_id', auth()->id());
+                $builder->where('orders.user_id', auth()->id());
             }
         });
 
         static::creating(static function (Order $order) {
             if ($order->isDirty('client_id') && $order->isDirty('supplier_id')) {
-                dump($order->client_id, $order->supplier_id);
                 throw new InvalidArgumentException('An order cannot have both a client and a supplier.');
             }
 
@@ -74,7 +73,7 @@ class Order extends Model
 
     public function scopeForUser(Order $order, int $userId): Builder
     {
-        return $order->withoutGlobalScope('user')->where('user_id', $userId);
+        return $order->withoutGlobalScope('user')->where('orders.user_id', $userId);
     }
 
     public function scopeAllUsers(Order $query): Builder
@@ -122,6 +121,11 @@ class Order extends Model
                     ->whereColumn('order_id', 'orders.id'),
             ])
             ->orderBy('stock_calc', $direction);
+    }
+
+    public function isClientOrder(): bool
+    {
+        return ! is_null($this->client_id);
     }
 
     protected function cost(): Attribute

@@ -31,7 +31,7 @@ const pageSizeOptions = [10, 25, 50, 100] as const;
             <SelectTrigger class="h-8">
                 <SelectValue :placeholder="`${pageSize}`" />
             </SelectTrigger>
-            <SelectContent side="top">
+            <SelectContent side="bottom">
                 <SelectItem
                     v-for="pageSizeOption in pageSizeOptions"
                     :key="pageSizeOption"

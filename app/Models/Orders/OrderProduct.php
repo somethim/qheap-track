@@ -23,7 +23,7 @@ class OrderProduct extends Model
         static::addGlobalScope('user', function (Builder $builder) {
             if (auth()->check()) {
                 $builder->whereHas('order', function ($order) {
-                    $order->where('user_id', auth()->id());
+                    $order->where('orders.user_id', auth()->id());
                 });
             }
         });

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useApiSearch } from '@/composables/useApiSearch';
 import { Check, Search, X } from 'lucide-vue-next';
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 interface SearchSelectorProps<TItem extends Record<string, unknown>> {
     url: string;
@@ -17,6 +17,7 @@ interface SearchSelectorProps<TItem extends Record<string, unknown>> {
     searchDelay?: number;
     responseKey?: string;
     searchParam?: string;
+    showIcons?: boolean;
 }
 
 const props = withDefaults(defineProps<SearchSelectorProps<TItem>>(), {
@@ -25,11 +26,12 @@ const props = withDefaults(defineProps<SearchSelectorProps<TItem>>(), {
     noResultsText: 'No results found',
     searchDelay: 300,
     responseKey: 'searchResults',
-    searchParam: 'term',
+    searchParam: 'search',
 });
 
 const emit = defineEmits<{
     'update:modelValue': [value: number | string | null];
+    select: [item: TItem | null];
 }>();
 
 const emitUpdate = (value: number | string | null | undefined) => {
@@ -39,6 +41,14 @@ const emitUpdate = (value: number | string | null | undefined) => {
 const selectedItem = ref<TItem | null>(null);
 const searchTerm = ref(props.defaultValue ?? '');
 const showSuggestions = ref(false);
+const containerRef = ref<HTMLElement | null>(null);
+const dropdownRef = ref<HTMLElement | null>(null);
+const dropdownStyles = ref({
+    position: 'fixed' as const,
+    top: '0px',
+    left: '0px',
+    width: '0px',
+});
 
 const { itemsList, performSearch, clearResults } = useApiSearch<TItem>(
     props.url,
@@ -83,6 +93,7 @@ const hasSecondaryFieldValue = (
 const selectItem = (item: TItem) => {
     selectedItem.value = item;
     emitUpdate(item[props.idField] as number | string);
+    emit('select', item);
     searchTerm.value = getDisplayValue(item);
     showSuggestions.value = false;
 };
@@ -90,18 +101,53 @@ const selectItem = (item: TItem) => {
 const clearSelection = () => {
     selectedItem.value = null;
     emitUpdate(null);
+    emit('select', null);
     searchTerm.value = props.defaultValue ?? '';
     showSuggestions.value = false;
 };
 
-const handleInputFocus = () => {
+const updateDropdownPosition = () => {
+    if (!containerRef.value) return;
+
+    const rect = containerRef.value.getBoundingClientRect();
+
+    dropdownStyles.value = {
+        position: 'fixed',
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        top: `${rect.bottom + 4}px`,
+    };
+};
+
+const handleInputFocus = async () => {
     showSuggestions.value = true;
+    await nextTick();
+    updateDropdownPosition();
+    performSearch(searchTerm.value);
 };
 
 const handleInputBlur = () => {
     setTimeout(() => {
         showSuggestions.value = false;
     }, 150);
+};
+
+let scrollParent: HTMLElement | Window | null = null;
+
+const findScrollParent = (
+    element: HTMLElement | null,
+): HTMLElement | Window => {
+    if (!element) return window;
+
+    const parent = element.parentElement;
+    if (!parent || parent === document.body) return window;
+
+    const overflowY = window.getComputedStyle(parent).overflowY;
+    if (overflowY === 'auto' || overflowY === 'scroll') {
+        return parent;
+    }
+
+    return findScrollParent(parent);
 };
 
 watch(
@@ -135,6 +181,21 @@ watch(searchTerm, (newTerm) => {
     performSearch(newTerm);
 });
 
+watch(showSuggestions, (isShowing) => {
+    if (isShowing) {
+        nextTick(() => updateDropdownPosition());
+
+        scrollParent = findScrollParent(containerRef.value);
+        window.addEventListener('resize', updateDropdownPosition);
+        scrollParent.addEventListener('scroll', updateDropdownPosition);
+    } else {
+        window.removeEventListener('resize', updateDropdownPosition);
+        if (scrollParent) {
+            scrollParent.removeEventListener('scroll', updateDropdownPosition);
+        }
+    }
+});
+
 onMounted(() => {
     if (!props.defaultValue) {
         performSearch('');
@@ -143,19 +204,24 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     clearResults();
+    window.removeEventListener('resize', updateDropdownPosition);
+    if (scrollParent) {
+        scrollParent.removeEventListener('scroll', updateDropdownPosition);
+    }
 });
 </script>
 
 <template>
-    <div class="relative w-full">
+    <div ref="containerRef" class="relative w-full">
         <div class="relative">
             <Search
-                class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                v-if="showIcons"
+                class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 pr-10 text-muted-foreground"
             />
             <Input
                 v-model="searchTerm"
                 :placeholder="props.placeholder"
-                class="w-full pr-10 pl-10"
+                class="w-full pr-10"
                 @blur="handleInputBlur"
                 @focus="handleInputFocus"
             />
@@ -170,66 +236,73 @@ onBeforeUnmount(() => {
             </Button>
         </div>
 
-        <div
-            v-if="showSuggestions && itemsList.length > 0"
-            class="absolute top-full z-50 mt-1 w-full rounded-md border bg-background shadow-lg"
-        >
-            <div class="max-h-60 overflow-y-auto">
-                <div
-                    v-for="item in itemsList"
-                    :key="String((item as TItem)[props.idField])"
-                    class="flex cursor-pointer items-center justify-between px-3 py-2 text-sm hover:bg-accent"
-                    @mousedown.prevent="selectItem(item as TItem)"
-                >
-                    <div class="min-w-0 flex-1">
-                        <div class="truncate font-medium">
-                            {{ getDisplayValue(item as TItem) }}
-                        </div>
-                        <div
-                            v-if="props.secondaryFields.length > 0"
-                            class="space-y-1 text-xs text-muted-foreground"
-                        >
-                            <template
-                                v-for="fieldName in props.secondaryFields"
-                                :key="String(fieldName)"
+        <Teleport to="body">
+            <div
+                v-if="showSuggestions && itemsList.length > 0"
+                ref="dropdownRef"
+                :style="dropdownStyles"
+                class="z-[9999] rounded-md border bg-background shadow-lg"
+            >
+                <div class="max-h-60 overflow-y-auto">
+                    <div
+                        v-for="item in itemsList"
+                        :key="String((item as TItem)[props.idField])"
+                        class="flex cursor-pointer items-center justify-between px-3 py-2 text-sm hover:bg-accent"
+                        @mousedown.prevent="selectItem(item as TItem)"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate font-medium">
+                                {{ getDisplayValue(item as TItem) }}
+                            </div>
+                            <div
+                                v-if="props.secondaryFields.length > 0"
+                                class="space-y-1 text-xs text-muted-foreground"
                             >
-                                <div
-                                    v-if="
-                                        hasSecondaryFieldValue(
-                                            item as TItem,
-                                            fieldName,
-                                        )
-                                    "
-                                    class="truncate"
+                                <template
+                                    v-for="fieldName in props.secondaryFields"
+                                    :key="String(fieldName)"
                                 >
-                                    {{
-                                        getSecondaryFieldValue(
-                                            item as TItem,
-                                            fieldName,
-                                        )
-                                    }}
-                                </div>
-                            </template>
+                                    <div
+                                        v-if="
+                                            hasSecondaryFieldValue(
+                                                item as TItem,
+                                                fieldName,
+                                            )
+                                        "
+                                        class="truncate"
+                                    >
+                                        {{
+                                            getSecondaryFieldValue(
+                                                item as TItem,
+                                                fieldName,
+                                            )
+                                        }}
+                                    </div>
+                                </template>
+                            </div>
                         </div>
+                        <Check
+                            v-if="
+                                (selectedItem as TItem)?.[props.idField] ===
+                                (item as TItem)[props.idField]
+                            "
+                            class="h-4 w-4 text-primary"
+                        />
                     </div>
-                    <Check
-                        v-if="
-                            (selectedItem as TItem)?.[props.idField] ===
-                            (item as TItem)[props.idField]
-                        "
-                        class="h-4 w-4 text-primary"
-                    />
                 </div>
             </div>
-        </div>
 
-        <div
-            v-if="
-                showSuggestions && itemsList.length === 0 && searchTerm.trim()
-            "
-            class="absolute top-full z-50 mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-lg"
-        >
-            {{ props.noResultsText }}
-        </div>
+            <div
+                v-if="
+                    showSuggestions &&
+                    itemsList.length === 0 &&
+                    searchTerm.trim()
+                "
+                :style="dropdownStyles"
+                class="z-[9999] rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground shadow-lg"
+            >
+                {{ props.noResultsText }}
+            </div>
+        </Teleport>
     </div>
 </template>

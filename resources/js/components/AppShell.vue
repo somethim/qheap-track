@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { Toaster } from '@/components/ui/sonner';
+import { useFlashMessages } from '@/composables/useFlashMessages';
 import { usePage } from '@inertiajs/vue3';
 
 interface Props {
@@ -9,6 +11,8 @@ interface Props {
 defineProps<Props>();
 
 const isOpen = usePage().props.sidebarOpen;
+
+useFlashMessages();
 </script>
 
 <template>
@@ -18,4 +22,7 @@ const isOpen = usePage().props.sidebarOpen;
     <SidebarProvider v-else :default-open="isOpen">
         <slot />
     </SidebarProvider>
+    <Teleport to="body">
+        <Toaster />
+    </Teleport>
 </template>

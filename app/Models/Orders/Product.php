@@ -28,19 +28,19 @@ class Product extends Model
     {
         static::addGlobalScope('user', function (Builder $builder) {
             if (auth()->check()) {
-                $builder->where('user_id', auth()->id());
+                $builder->where('products.user_id', auth()->id());
             }
         });
     }
 
-    public function scopeForUser(Product $product, int $userId): Builder
+    public function scopeForUser(Builder $builder, int $userId): Builder
     {
-        return $product->withoutGlobalScope('user')->where('user_id', $userId);
+        return $builder->withoutGlobalScope('user')->where('products.user_id', $userId);
     }
 
-    public function scopeAllUsers(Product $product): Builder
+    public function scopeAllUsers(Builder $builder): Builder
     {
-        return $product->withoutGlobalScope('user');
+        return $builder->withoutGlobalScope('user');
     }
 
     public function user(): BelongsTo

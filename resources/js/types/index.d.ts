@@ -24,6 +24,12 @@ export type AppPageProps<
     quote: { message: string; author: string };
     auth: Auth;
     sidebarOpen: boolean;
+    success?: string;
+    error?: string;
+    info?: string;
+    warning?: string;
+    status?: string;
+    errors?: Record<string, string[]>;
 };
 
 export interface User {

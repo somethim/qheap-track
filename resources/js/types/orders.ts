@@ -22,6 +22,7 @@ export interface BaseOrder {
     order_number: string;
     cost: number;
     stock: number;
+    formatted_cost?: string;
     created_at: string;
     updated_at: string;
     order_products: OrderProduct[];
@@ -36,6 +37,9 @@ export type Client = {
     address: string | null;
     created_at: string;
     updated_at: string;
+    orders_count?: number;
+    orders?: ClientOrder[];
+    formatted_cost?: string;
 };
 
 export interface ClientOrder extends BaseOrder {
@@ -44,7 +48,19 @@ export interface ClientOrder extends BaseOrder {
     client: Client;
 }
 
-export type Supplier = Client;
+export type Supplier = {
+    id: number;
+    name: string;
+    description: string | null;
+    contact_email: string | null;
+    contact_phone: string | null;
+    address: string | null;
+    created_at: string;
+    updated_at: string;
+    orders_count?: number;
+    orders?: SupplierOrder[];
+    formatted_cost?: string;
+};
 
 export interface SupplierOrder extends BaseOrder {
     client_id: null;
